@@ -273,7 +273,7 @@ button{font-family:inherit; cursor:pointer;}
 .field input:focus, .field select:focus, .field textarea:focus{border-color: var(--main);}
 .amount-input{position:relative; display:flex; align-items:center;}
 .amount-input .peso{position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:800; color:var(--main); font-size:16px; pointer-events:none; z-index:1;}
-.amount-input input{width:100%; padding-left:38px; font-family:'DM Mono'; font-size:18px; font-weight:700; letter-spacing:.2px;}
+.amount-input input{width:100%; padding-left:48px; font-family:'DM Mono'; font-size:18px; font-weight:700; letter-spacing:.2px;}
 .amount-input input[type=number]::-webkit-outer-spin-button,
 .amount-input input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
 .amount-input input[type=number]{-moz-appearance:textfield;}
@@ -530,12 +530,17 @@ button{font-family:inherit; cursor:pointer;}
     </div>
 
     <div class="field" id="txn-group-field">
-      <label>Group</label>
+      <label>Group (per-account)</label>
       <select id="txn-group-select"><option value="">Uncategorized</option></select>
     </div>
     <div class="field" id="txn-subgroup-field" style="display:none;">
       <label>Subgroup</label>
       <select id="txn-subgroup-select"><option value="">None</option></select>
+    </div>
+
+    <div class="field">
+      <label>Category (global)</label>
+      <select id="txn-global-category"><option value="">None</option></select>
     </div>
 
     <div class="field">
@@ -581,6 +586,7 @@ function defaultState(){
   return {
     accounts: [],
     transactions: [],
+    globalCategories: ['Salary','Food','Transport','Rent','Utilities','Entertainment','Shopping','Other'],
     settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [] }
   };
 }
@@ -676,8 +682,6 @@ function groupBalance(acc, groupId, subgroupId){
   let bal=0;
   state.transactions.forEach(t=>{
     const isIncomingTransfer = t.type==='transfer' && t.toAccountId===acc.id;
-    // Incoming transfers are never user-categorized, so they land in Uncategorized —
-    // this keeps Uncategorized + all groups always equal to the account total.
     let belongsAcc = (t.accountId===acc.id) || (t.type==='transfer' && t.fromAccountId===acc.id) || (isIncomingTransfer && groupId===null && subgroupId===undefined);
     if(!belongsAcc) return;
     if(t.groupId!==groupId) return;
@@ -920,7 +924,6 @@ function renderAccountDetail(){
 }
 function toggleGroup(id){ openGroupIds.has(id)?openGroupIds.delete(id):openGroupIds.add(id); renderAccountDetail(); }
 function shade(hex){
-  // slightly lighten for gradient end
   const c = hex.replace('#','');
   const r = Math.min(255, parseInt(c.substr(0,2),16)+30);
   const g = Math.min(255, parseInt(c.substr(2,2),16)+30);
@@ -1126,6 +1129,7 @@ function openTxnModal(accountId){
   renderTxnTypeSeg();
   renderTxnAccGrids();
   renderTxnGroupSelects();
+  renderGlobalCategorySelect();
   showOverlay('modal-txn');
 }
 function openGroupTxnModal(accId, groupId, subgroupId){
@@ -1174,6 +1178,10 @@ function renderTxnSubgroupSelect(){
     field.style.display='none'; ssel.innerHTML='<option value="">None</option>';
   }
 }
+function renderGlobalCategorySelect(){
+  const sel = document.getElementById('txn-global-category');
+  sel.innerHTML = '<option value="">None</option>' + state.globalCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+}
 
 function saveTxn(){
   const amount = parseFloat(document.getElementById('txn-amount').value);
@@ -1183,7 +1191,8 @@ function saveTxn(){
 
   const base = {
     id: uid(), amount, note: document.getElementById('txn-note').value.trim(),
-    date: document.getElementById('txn-date').value || todayStr(), createdAt: Date.now()
+    date: document.getElementById('txn-date').value || todayStr(), createdAt: Date.now(),
+    globalCategory: document.getElementById('txn-global-category').value || null
   };
   if(txnModalState.type==='transfer'){
     state.transactions.push({...base, type:'transfer', fromAccountId:txnModalState.fromId, toAccountId:txnModalState.toId,

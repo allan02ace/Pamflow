@@ -103,14 +103,28 @@ button{font-family:inherit; cursor:pointer;}
 .jar-card .coin.c2{top:64px; right:70px; font-size:16px; animation-delay:1.4s;}
 .jar-card .coin.c3{top:100px; right:22px; font-size:14px; animation-delay:2.3s;}
 @keyframes float{0%,100%{transform:translateY(0) rotate(0deg);} 50%{transform:translateY(-8px) rotate(8deg);}}
-.jar-card .eyebrow{font-size:13px; opacity:.85; font-weight:700; letter-spacing:.3px; text-transform:uppercase;}
-.jar-card .total{font-family:'Baloo 2'; font-size:40px; font-weight:800; margin-top:4px; letter-spacing:.2px;}
-.jar-card .sub{font-size:13px; opacity:.85; margin-top:6px;}
+.jar-card .eyebrow{font-size:13px; opacity:.85; font-weight:700; letter-spacing:.3px; text-transform:uppercase; pointer-events:none;}
+.jar-card .total{font-family:'Baloo 2'; font-size:40px; font-weight:800; margin-top:4px; letter-spacing:.2px; pointer-events:none;}
+.jar-card .sub{font-size:13px; opacity:.85; margin-top:6px; pointer-events:none;}
 .jar-card .gear{
-  position:absolute; top:16px; right:16px;
+  position:absolute; top:16px; right:16px; z-index:5;
   width:34px; height:34px; border-radius:50%;
   background: rgba(255,255,255,0.18); border:none; color:#fff; font-size:16px;
 }
+
+/* ===== Greeting ===== */
+.greeting-block{padding: 2px 4px 16px;}
+.greeting-block .greet-time{font-family:'Baloo 2'; font-size:21px; font-weight:800; color:var(--main-dark); line-height:1.2;}
+.greeting-block .greet-fun{font-size:12.5px; color:var(--ink-soft); font-weight:600; margin-top:3px;}
+
+.save-indicator{
+  position:absolute; right:2px; top:-1px;
+  font-size:11px; font-weight:800; color:var(--teal-dark);
+  opacity:0; transform:translateY(-2px);
+  transition: opacity .25s ease, transform .25s ease;
+  display:flex; align-items:center; gap:3px;
+}
+.save-indicator.show{opacity:1; transform:translateY(0);}
 
 .section-head{display:flex; align-items:center; justify-content:space-between; margin: 18px 2px 10px;}
 .section-head h2{font-size:16px; color:var(--main-dark);}
@@ -408,12 +422,17 @@ button{font-family:inherit; cursor:pointer;}
 
   <!-- HOME -->
   <div class="view" id="view-home">
+    <div class="greeting-block">
+      <div class="greet-time" id="greet-time">Hello!</div>
+      <div class="greet-fun" id="greet-fun"></div>
+    </div>
     <div class="jar-card">
       <span class="coin c1">🪙</span><span class="coin c2">✨</span><span class="coin c3">🪙</span>
+      <button class="gear" id="hide-amounts-btn" style="right:58px;" onclick="toggleHideAmounts()" title="Hide amounts">👁️</button>
       <button class="gear" onclick="go('settings')">⚙️</button>
       <div class="eyebrow">Total money</div>
       <div class="total mono" id="home-total">₱0.00</div>
-      <div class="sub" id="home-sub">Across all your accounts</div>
+      <div class="sub" id="home-sub">Your total balance</div>
     </div>
 
     <div id="home-sections"></div>
@@ -471,6 +490,16 @@ button{font-family:inherit; cursor:pointer;}
     <div class="section-head" style="margin-top:16px;"><h2>Settings</h2></div>
     <div class="data-banner"><span class="i">💾</span><span>PAMFlow saves everything on this device automatically. Open this same file in your browser (or add it to your home screen) to keep your data — it won't carry over if you copy the file elsewhere.</span></div>
 
+    <div class="section-head"><h2 style="font-size:14px;">Profile</h2></div>
+    <div class="field" style="margin-bottom:10px; position:relative;">
+      <label>Your name <span class="save-indicator" id="username-saved">✓ Saved</span></label>
+      <input type="text" id="settings-username" placeholder="e.g. 0088" oninput="saveUserName(this.value)">
+    </div>
+    <div class="settings-row" style="background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:16px;">
+      <div class="lbl">🙈 Hide amounts</div>
+      <label class="switch"><input type="checkbox" id="settings-hide-amounts" onchange="toggleHideAmounts()"><span class="track"></span></label>
+    </div>
+
     <div class="section-head"><h2 style="font-size:14px;">Include in home total</h2></div>
     <div id="settings-accounts"></div>
 
@@ -492,9 +521,9 @@ button{font-family:inherit; cursor:pointer;}
 
   <div class="bottomnav">
     <button class="navbtn active" id="nav-home" onclick="go('home')"><span class="ic">🏠</span>Home</button>
-    <button class="navbtn" id="nav-stats" onclick="go('stats')"><span class="ic">📊</span>Stats</button>
     <button class="fab" onclick="openTxnModal()">+</button>
-    <button class="navbtn" id="nav-txns" onclick="go('txns')"><span class="ic">📒</span>Ledger</button>
+    <button class="navbtn" id="nav-stats" onclick="go('stats')"><span class="ic">📊</span>Stats</button>
+    <button class="navbtn" id="nav-txns" onclick="go('txns')"><span class="ic">📒</span>Transactions</button>
   </div>
 
 </div>
@@ -512,6 +541,7 @@ button{font-family:inherit; cursor:pointer;}
         <button data-v="bank" class="active">🏦 Bank</button>
         <button data-v="digital">📱 Digital</button>
         <button data-v="cash">💵 Cash</button>
+        <button data-v="credit">💳 Credit</button>
       </div>
     </div>
 
@@ -543,6 +573,11 @@ button{font-family:inherit; cursor:pointer;}
     <div class="field" id="acct-opening-field">
       <label>Opening balance</label>
       <div class="amount-input"><span class="peso">₱</span><input type="number" inputmode="decimal" id="acct-opening" placeholder="0.00"></div>
+    </div>
+
+    <div class="field" id="acct-creditlimit-field">
+      <label>Credit limit</label>
+      <div class="amount-input"><span class="peso">₱</span><input type="number" inputmode="decimal" id="acct-creditlimit" placeholder="0.00"></div>
     </div>
 
     <button class="btn-primary" onclick="saveAccount()">Save account</button>
@@ -617,6 +652,11 @@ button{font-family:inherit; cursor:pointer;}
     <div class="field">
       <label id="group-name-label">Group name</label>
       <input type="text" id="group-name-input" placeholder="e.g. Operating Fund, Travel">
+    </div>
+    <div class="field">
+      <label id="group-amount-label">Amount to allocate</label>
+      <div class="amount-input"><span class="peso">₱</span><input type="number" inputmode="decimal" id="group-amount-input" placeholder="0.00"></div>
+      <div style="font-size:11.5px; color:var(--ink-soft); margin-top:5px;" id="group-amount-hint"></div>
     </div>
     <button class="btn-primary" onclick="saveGroup()">Save</button>
   </div>
@@ -702,7 +742,7 @@ function defaultState(){
     accounts: [],
     transactions: [],
     classifications: defaultClassifications(),
-    settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [] }
+    settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [], userName: '', hideAmounts: false }
   };
 }
 let state = defaultState();
@@ -723,6 +763,9 @@ loadState();
 
 // Migration: older saved data won't have a classifications list yet.
 if(!Array.isArray(state.classifications)) state.classifications = defaultClassifications();
+if(!state.settings) state.settings = { includedAccounts: [], excludedGroups: [], excludedSubgroups: [] };
+if(typeof state.settings.userName !== 'string') state.settings.userName = '';
+if(typeof state.settings.hideAmounts !== 'boolean') state.settings.hideAmounts = false;
 
 /* ============ PRESETS ============ */
 const PRESETS = {
@@ -754,12 +797,27 @@ const PRESETS = {
     {name:'Cash Wallet', slug:'cash-wallet', icon:'💵', color:'#c98a3f'},
     {name:'Petty Cash', slug:'petty-cash', icon:'👛', color:'#ba8a5f'},
     {name:'Other cash…', icon:'💵', color:'#c98a3f', custom:true},
+  ],
+  credit: [
+    {name:'Atome', slug:'atome', icon:'💳', color:'#0a2540'},
+    {name:'SPayLater', slug:'spaylater', icon:'💳', color:'#ee4d2d'},
+    {name:'TikTok PayLater', slug:'tiktok-paylater', icon:'💳', color:'#010101'},
+    {name:'LazPayLater', slug:'lazpaylater', icon:'💳', color:'#0f146d'},
+    {name:'BDO Credit Card', slug:'bdo', icon:'💳', color:'#5e1086'},
+    {name:'BPI Credit Card', slug:'bpi', icon:'💳', color:'#a05fba'},
+    {name:'Metrobank Credit Card', slug:'metrobank', icon:'💳', color:'#7f5f8d'},
+    {name:'RCBC Credit Card', slug:'rcbc', icon:'💳', color:'#5f8aba'},
+    {name:'Security Bank Credit Card', slug:'security-bank', icon:'💳', color:'#5fbaaf'},
+    {name:'UnionBank Credit Card', slug:'unionbank', icon:'💳', color:'#8a5fba'},
+    {name:'EastWest Credit Card', slug:'eastwest-bank', icon:'💳', color:'#ba8a5f'},
+    {name:'Other credit card…', icon:'💳', color:'#0a2540', custom:true},
   ]
 };
-const TYPE_LABEL = {bank:'Bank', digital:'Digital bank', cash:'Cash'};
+const TYPE_LABEL = {bank:'Bank', digital:'Digital bank', cash:'Cash', credit:'Credit card'};
 
 /* ============ HELPERS ============ */
 function peso(n){
+  if(state.settings && state.settings.hideAmounts) return '₱ •••••';
   const v = Math.round((n + Number.EPSILON) * 100) / 100;
   const sign = v < 0 ? '-' : '';
   return sign + '₱' + Math.abs(v).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -884,10 +942,10 @@ function render(){
 
 function renderHome(){
   document.getElementById('home-total').textContent = peso(grandTotal());
-  const includedCount = state.settings.includedAccounts.length;
   document.getElementById('home-sub').textContent = state.accounts.length === 0
     ? 'Add your first account to get started'
-    : `Counting ${includedCount} of ${state.accounts.length} account${state.accounts.length===1?'':'s'}`;
+    : 'Your total balance';
+  renderGreeting();
 
   const wrap = document.getElementById('home-sections');
   wrap.innerHTML = '';
@@ -898,15 +956,17 @@ function renderHome(){
     return;
   }
 
-  ['bank','digital','cash'].forEach(type=>{
+  const typeHeads = {bank:'🏦 Banks', digital:'📱 Digital banks', cash:'💵 Cash', credit:'💳 Credit Cards'};
+  const typeEmptyLabels = {bank:'bank', digital:'digital banks', cash:'cash', credit:'credit cards'};
+  ['bank','digital','cash','credit'].forEach(type=>{
     const accs = state.accounts.filter(a=>a.type===type);
     const section = document.createElement('div');
     section.innerHTML = `
       <div class="section-head">
-        <h2>${type==='bank'?'🏦 Banks':type==='digital'?'📱 Digital banks':'💵 Cash'}</h2>
+        <h2>${typeHeads[type]}</h2>
         <button class="add-link" onclick="openAccountModal('${type}')">+ Add</button>
       </div>
-      <div class="acc-grid">${accs.length? accs.map(a=>accCardHTML(a)).join('') : `<div class="empty" style="padding:16px;"><span style="font-size:12px;">No ${type==='digital'?'digital banks':type} added yet.</span></div>`}</div>
+      <div class="acc-grid">${accs.length? accs.map(a=>accCardHTML(a)).join('') : `<div class="empty" style="padding:16px;"><span style="font-size:12px;">No ${typeEmptyLabels[type]} added yet.</span></div>`}</div>
     `;
     wrap.appendChild(section);
   });
@@ -914,11 +974,13 @@ function renderHome(){
 
 function accCardHTML(a){
   const bal = accountBalance(a, false);
+  const limitLine = (a.type==='credit' && a.creditLimit) ? `<div class="acc-type">Limit: ${peso(a.creditLimit)}</div>` : '';
   return `<div class="acc-card" onclick="go('account','${a.id}')">
     <div class="acc-avatar" style="background:${a.color}">${avatarInner(a)}</div>
     <div class="acc-meta">
       <div class="acc-name">${escapeHtml(a.name)}</div>
       <div class="acc-type">${TYPE_LABEL[a.type]}</div>
+      ${limitLine}
     </div>
     <div class="acc-bal ${bal<0?'neg':''} mono">${peso(bal)}</div>
   </div>`;
@@ -1011,6 +1073,7 @@ function renderAccountDetail(){
       <div><div class="nm">${escapeHtml(acc.name)}</div><div class="ty">${TYPE_LABEL[acc.type]}</div></div>
     </div>
     <div class="bal mono">${peso(bal)}</div>
+    ${(acc.type==='credit' && acc.creditLimit) ? `<div class="ty">Credit limit: ${peso(acc.creditLimit)}</div>` : ''}
     <div class="actions">
       <button class="pillbtn" onclick="openAccountModal(null,'${acc.id}')">✏️ Edit</button>
       <button class="pillbtn" onclick="openTxnModal('${acc.id}')">+ Transaction</button>
@@ -1249,9 +1312,10 @@ function openAccountModal(presetType, editId){
   document.getElementById('acct-modal-title').textContent = acc ? 'Edit account' : 'Add account';
   document.getElementById('acct-name').value = acc ? acc.name : '';
   document.getElementById('acct-opening').value = acc ? (acc.opening||0) : '';
-  document.getElementById('acct-opening-field').style.display = acc ? 'none' : 'block';
+  document.getElementById('acct-creditlimit').value = acc ? (acc.creditLimit||'') : '';
   document.getElementById('acct-presets-field').style.display = acc ? 'none' : 'block';
   document.getElementById('acct-delete-btn').style.display = acc ? 'block' : 'none';
+  renderAcctFieldVisibility(acc);
   renderAcctTypeSeg();
   renderPresetGrid();
   renderEmojiRow();
@@ -1259,11 +1323,19 @@ function openAccountModal(presetType, editId){
   renderLogoRow();
   showOverlay('modal-account');
 }
+function renderAcctFieldVisibility(acc){
+  const isCredit = acctModalState.type === 'credit';
+  // Opening balance doesn't apply to credit cards (they track spend against a limit, not a starting balance),
+  // and it's a one-time value only settable when the account is first created.
+  document.getElementById('acct-opening-field').style.display = (acc || isCredit) ? 'none' : 'block';
+  // Credit limit only applies to credit cards, and can be adjusted any time (limits change).
+  document.getElementById('acct-creditlimit-field').style.display = isCredit ? 'block' : 'none';
+}
 function renderAcctTypeSeg(){
   const seg = document.getElementById('acct-type-seg');
   [...seg.children].forEach(b=>{
     b.classList.toggle('active', b.dataset.v===acctModalState.type);
-    b.onclick = ()=>{ acctModalState.type = b.dataset.v; renderAcctTypeSeg(); renderPresetGrid(); };
+    b.onclick = ()=>{ acctModalState.type = b.dataset.v; renderAcctTypeSeg(); renderPresetGrid(); renderAcctFieldVisibility(acctModalState.editId?getAccount(acctModalState.editId):null); };
   });
 }
 function renderPresetGrid(){
@@ -1316,12 +1388,15 @@ function pickLogo(slug){ acctModalState.logo = slug; renderLogoRow(); }
 function saveAccount(){
   const name = document.getElementById('acct-name').value.trim();
   if(!name){ toast('Give this account a name'); return; }
+  const creditLimitRaw = document.getElementById('acct-creditlimit').value;
+  const creditLimit = acctModalState.type==='credit' && creditLimitRaw!=='' ? (parseFloat(creditLimitRaw)||0) : undefined;
   if(acctModalState.editId){
     const acc = getAccount(acctModalState.editId);
     acc.name = name; acc.type = acctModalState.type; acc.icon = acctModalState.icon; acc.color = acctModalState.color; acc.logo = acctModalState.logo;
+    acc.creditLimit = creditLimit;
   } else {
-    const opening = parseFloat(document.getElementById('acct-opening').value) || 0;
-    const newAcc = { id: uid(), name, type: acctModalState.type, icon: acctModalState.icon, color: acctModalState.color, logo: acctModalState.logo, opening, groups: [] };
+    const opening = acctModalState.type==='credit' ? 0 : (parseFloat(document.getElementById('acct-opening').value) || 0);
+    const newAcc = { id: uid(), name, type: acctModalState.type, icon: acctModalState.icon, color: acctModalState.color, logo: acctModalState.logo, opening, creditLimit, groups: [] };
     state.accounts.push(newAcc);
     state.settings.includedAccounts.push(newAcc.id);
   }
@@ -1459,37 +1534,79 @@ function deleteClassification(id){
   if(!confirm('Delete this classification? Transactions using it will become unclassified.')) return;
   state.classifications = state.classifications.filter(c=>c.id!==id);
   state.transactions.forEach(t=>{ if(t.classificationId===id) t.classificationId=null; });
-  saveState(); renderClassificationSettings();
+  saveState(); renderClassificationSettings(); toast('Classification deleted');
 }
 
 /* ============ MODAL: GROUP / SUBGROUP ============ */
 let groupModalState = { accId:null, mode:'group', groupId:null };
+
+// Money sitting directly in a group, not yet assigned to any of its subgroups.
+function groupOwnBalance(acc, groupId){
+  const g = findGroup(acc, groupId);
+  const total = groupBalance(acc, groupId); // group total, includes subgroups
+  const subsTotal = (g.subgroups||[]).reduce((s,sg)=> s + groupBalance(acc, groupId, sg.id), 0);
+  return total - subsTotal;
+}
+
 function openGroupModal(accId){
   groupModalState = { accId, mode:'group', groupId:null };
+  const acc = getAccount(accId);
+  const available = groupBalance(acc, null) + (acc.opening||0); // Unrestricted bucket
   document.getElementById('group-modal-title').textContent = 'Add group';
   document.getElementById('group-name-label').textContent = 'Group name';
   document.getElementById('group-name-input').value = '';
+  document.getElementById('group-amount-input').value = '';
+  document.getElementById('group-amount-hint').textContent = `Available in Unrestricted: ${peso(available)}`;
   showOverlay('modal-group');
 }
 function openSubgroupModal(accId, groupId){
   groupModalState = { accId, mode:'subgroup', groupId };
+  const acc = getAccount(accId);
+  const available = groupOwnBalance(acc, groupId);
   document.getElementById('group-modal-title').textContent = 'Add subgroup';
   document.getElementById('group-name-label').textContent = 'Subgroup name';
   document.getElementById('group-name-input').value = '';
+  document.getElementById('group-amount-input').value = '';
+  document.getElementById('group-amount-hint').textContent = `Available in this group: ${peso(available)}`;
   showOverlay('modal-group');
 }
 function saveGroup(){
   const name = document.getElementById('group-name-input').value.trim();
   if(!name){ toast('Enter a name'); return; }
+  const amount = parseFloat(document.getElementById('group-amount-input').value) || 0;
+  if(amount < 0){ toast('Enter a valid amount'); return; }
   const acc = getAccount(groupModalState.accId);
+  const EPS = 0.005;
   if(groupModalState.mode==='group'){
+    const available = groupBalance(acc, null) + (acc.opening||0);
+    if(amount > available + EPS){ toast(`Amount exceeds Unrestricted balance (${peso(available)})`); return; }
     acc.groups = acc.groups || [];
-    acc.groups.push({ id: uid(), name, subgroups: [] });
+    const newGroup = { id: uid(), name, subgroups: [] };
+    acc.groups.push(newGroup);
+    if(amount > 0){
+      state.transactions.push({
+        id: uid(), type:'reallocate', accountId: acc.id,
+        fromGroupId: null, fromSubgroupId: null,
+        toGroupId: newGroup.id, toSubgroupId: null,
+        amount, note: 'Starting allocation', date: todayStr(), createdAt: Date.now()
+      });
+    }
   } else {
     const g = findGroup(acc, groupModalState.groupId);
+    const available = groupOwnBalance(acc, g.id);
+    if(amount > available + EPS){ toast(`Amount exceeds available in group (${peso(available)})`); return; }
     g.subgroups = g.subgroups || [];
-    g.subgroups.push({ id: uid(), name });
+    const newSub = { id: uid(), name };
+    g.subgroups.push(newSub);
     openGroupIds.add(g.id);
+    if(amount > 0){
+      state.transactions.push({
+        id: uid(), type:'reallocate', accountId: acc.id,
+        fromGroupId: g.id, fromSubgroupId: null,
+        toGroupId: g.id, toSubgroupId: newSub.id,
+        amount, note: 'Starting allocation', date: todayStr(), createdAt: Date.now()
+      });
+    }
   }
   saveState(); hideOverlay('modal-group'); toast('Saved'); renderAccountDetail();
 }
@@ -1560,6 +1677,9 @@ function renderClassificationSettings(){
     </div>`).join('') : `<div class="empty" style="padding:16px;"><span style="font-size:12px;">No ${classificationSettingsType} classifications yet.</span></div>`;
 }
 function renderSettings(){
+  applyHideAmountsUI();
+  const nameInput = document.getElementById('settings-username');
+  if(nameInput && document.activeElement !== nameInput) nameInput.value = state.settings.userName || '';
   renderClassificationSettings();
   const wrap = document.getElementById('settings-accounts');
   if(state.accounts.length===0){
@@ -1578,16 +1698,18 @@ function renderSettings(){
       ${groups.length ? groups.map(g=>{
         const gKey = a.id+':'+g.id;
         const gIncluded = !state.settings.excludedGroups.includes(gKey);
+        const gEffective = included && gIncluded;
         return `<div class="settings-row sub-toggle">
           <div class="lbl" style="font-weight:700; font-size:12.5px; color:var(--ink-soft);">↳ ${escapeHtml(g.name)}</div>
-          <label class="switch"><input type="checkbox" ${gIncluded?'checked':''} ${included?'':'disabled'} onchange="toggleGroupIncluded('${gKey}')"><span class="track"></span></label>
+          <label class="switch"><input type="checkbox" ${gEffective?'checked':''} ${included?'':'disabled'} onchange="toggleGroupIncluded('${gKey}')"><span class="track"></span></label>
         </div>
         ${(g.subgroups||[]).map(s=>{
           const sKey = a.id+':'+g.id+':'+s.id;
           const sIncluded = !state.settings.excludedSubgroups.includes(sKey);
+          const sEffective = gEffective && sIncluded;
           return `<div class="settings-row subgroup-settings">
             <div class="lbl" style="font-weight:700; font-size:11.5px; color:var(--ink-soft);">↳ ${escapeHtml(s.name)}</div>
-            <label class="switch"><input type="checkbox" ${sIncluded?'checked':''} ${included&&gIncluded?'':'disabled'} onchange="toggleSubgroupIncluded('${sKey}')"><span class="track"></span></label>
+            <label class="switch"><input type="checkbox" ${sEffective?'checked':''} ${included&&gIncluded?'':'disabled'} onchange="toggleSubgroupIncluded('${sKey}')"><span class="track"></span></label>
           </div>`;
         }).join('')}`;
       }).join('') : ''}
@@ -1609,9 +1731,85 @@ function toggleSubgroupIncluded(key){
   if(idx>-1) state.settings.excludedSubgroups.splice(idx,1); else state.settings.excludedSubgroups.push(key);
   saveState(); renderSettings();
 }
+let userNameSavedTimer = null;
+function saveUserName(val){
+  state.settings.userName = (val||'').trim();
+  saveState();
+  renderGreeting();
+  const ind = document.getElementById('username-saved');
+  if(ind){
+    ind.classList.add('show');
+    clearTimeout(userNameSavedTimer);
+    userNameSavedTimer = setTimeout(()=> ind.classList.remove('show'), 1100);
+  }
+}
+
+function toggleHideAmounts(){
+  state.settings.hideAmounts = !state.settings.hideAmounts;
+  saveState();
+  applyHideAmountsUI();
+  render();
+}
+function applyHideAmountsUI(){
+  const hidden = state.settings.hideAmounts;
+  const btn = document.getElementById('hide-amounts-btn');
+  if(btn) btn.textContent = hidden ? '🙈' : '👁️';
+  const sw = document.getElementById('settings-hide-amounts');
+  if(sw) sw.checked = hidden;
+}
+
+/* ============ GREETING ============ */
+const FUNNY_GREETINGS = [
+  "Let's see where your pesos ran off to. 🏃💸",
+  "Your money called. It wants a status update.",
+  "Time to peek inside the piggy bank. 🐷",
+  "Budgets don't check themselves. Or do they? 👀",
+  "Another day, another chance to out-save yesterday.",
+  "Your wallet is watching. No pressure. 😅",
+  "Let's turn 'where did it go' into 'here's the plan.'",
+  "Cats knock things over. You track where the money goes. 🐱",
+  "Ledger's open, coffee's hot, let's do this. ☕",
+  "Small peso, big plans. Let's check in.",
+  "Savings goals don't reach themselves.",
+  "Plot twist: your finances are actually in order today.",
+  "Every centavo tells a story. Let's read today's chapter.",
+  "Warning: mild responsibility ahead. Proceed anyway. ✅",
+  "Your future self says thanks for checking in.",
+  "May pera ka? Saan mo siya dalahen?",
+  "Puro ka gastos, ayoko ng ganiyan!",
+  "Ma'am wala na akong pera, pa-void.",
+  "Pahiram muna sa GCash. Balik ko sa katapusan.",
+  "Hello! Naki-online lang ako. Si Sharmaine to, pautang naman 🍊",
+  "Vinavanessa na yang pera mo 🪰",
+  "Pawer! 👉 due date na naman ng power ⚡",
+];
+function timeGreeting(){
+  const h = new Date().getHours();
+  if(h < 5) return 'Late night,';
+  if(h < 12) return 'Good morning,';
+  if(h < 18) return 'Good afternoon,';
+  return 'Good evening,';
+}
+function renderGreeting(){
+  const timeEl = document.getElementById('greet-time');
+  const funEl = document.getElementById('greet-fun');
+  if(!timeEl || !funEl) return;
+  const name = (state.settings.userName || '').trim();
+  timeEl.textContent = name ? `${timeGreeting()} ${name}` : timeGreeting().replace(',', '!');
+  const idx = Math.floor(Date.now() / 86400000) % FUNNY_GREETINGS.length; // changes once a day
+  funEl.textContent = FUNNY_GREETINGS[idx];
+}
+
 function confirmReset(){
-  if(!confirm('Erase all accounts and transactions? This cannot be undone.')) return;
-  state = defaultState(); saveState(); toast('All data cleared'); go('home');
+  const val = prompt('This permanently erases all accounts and transactions. This cannot be undone.\n\nType DELETE to confirm.');
+  if(val === null) return;
+  if(val.trim().toUpperCase() !== 'DELETE'){ toast('Reset cancelled — text didn\'t match'); return; }
+  const keepName = state.settings.userName;
+  const keepHide = state.settings.hideAmounts;
+  state = defaultState();
+  state.settings.userName = keepName;
+  state.settings.hideAmounts = keepHide;
+  saveState(); toast('All data cleared'); go('home');
 }
 
 /* ============ OVERLAY HELPERS ============ */
@@ -1622,6 +1820,7 @@ document.querySelectorAll('.overlay').forEach(ov=>{
 });
 
 /* ============ INIT ============ */
+applyHideAmountsUI();
 go('home');
 </script>
 </body>

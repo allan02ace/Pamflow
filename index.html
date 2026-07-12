@@ -255,6 +255,7 @@ button{font-family:inherit; cursor:pointer;}
 }
 .overlay.show{opacity:1; pointer-events:auto;}
 .sheet{
+  position:relative;
   width:100%; max-width:480px; background: var(--pink-bg);
   border-radius: 26px 26px 0 0; padding: 18px 20px calc(24px + var(--safe-bottom));
   max-height: 88vh; overflow-y:auto;
@@ -263,6 +264,15 @@ button{font-family:inherit; cursor:pointer;}
 }
 .overlay.show .sheet{transform: translateY(0);}
 .sheet-handle{width:40px; height:4px; background:var(--mauve); opacity:.4; border-radius:3px; margin: 0 auto 14px;}
+.sheet-close{
+  position:absolute; top:14px; right:16px; z-index:5;
+  width:32px; height:32px; border-radius:50%; border:none;
+  background:#fff; box-shadow: var(--shadow-sm);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:800; color:var(--ink-soft);
+  transition: transform .12s ease;
+}
+.sheet-close:active{transform: scale(0.88);}
 .sheet h3{font-size:19px; margin-bottom:14px;}
 .field{margin-bottom:14px;}
 .field label{display:block; font-size:12.5px; font-weight:800; color:var(--main-dark); margin-bottom:6px; text-transform:uppercase; letter-spacing:.3px;}
@@ -293,7 +303,7 @@ button{font-family:inherit; cursor:pointer;}
   border-radius:14px; padding:9px 4px; text-align:center;
 }
 .preset-item.active{border-color: var(--main);}
-.preset-item .av{width:34px;height:34px;border-radius:11px; display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;}
+.preset-item .av{width:34px;height:34px;border-radius:11px; display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff; position:relative; overflow:hidden;}
 .preset-item span{font-size:10px; font-weight:700; color:var(--ink); line-height:1.15;}
 
 .emoji-row, .color-row{display:flex; gap:8px; flex-wrap:wrap;}
@@ -301,6 +311,17 @@ button{font-family:inherit; cursor:pointer;}
 .emoji-opt.active{border-color:var(--main); background:var(--pink-bg);}
 .color-opt{width:30px;height:30px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 0 2px var(--line);}
 .color-opt.active{box-shadow:0 0 0 2px var(--main);}
+
+.logo-row{display:flex; gap:8px; flex-wrap:wrap;}
+.logo-opt{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  width:56px; background:#fff; border:2px solid var(--line); border-radius:13px;
+  padding:7px 4px; text-align:center;
+}
+.logo-opt.active{border-color:var(--main); background:var(--pink-bg);}
+.logo-opt img{width:28px; height:28px; border-radius:8px; object-fit:cover;}
+.logo-opt-fallback{width:28px; height:28px; border-radius:8px; background:var(--pink-bg); display:flex; align-items:center; justify-content:center; font-size:14px;}
+.logo-opt small{font-size:9px; font-weight:700; color:var(--ink); line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:52px;}
 
 .btn-primary{
   width:100%; border:none; background: linear-gradient(135deg, var(--main), #8a1fb8);
@@ -438,7 +459,7 @@ button{font-family:inherit; cursor:pointer;}
   <div class="view hidden" id="view-settings">
     <div class="section-head" style="margin-top:16px;"><h2>Settings</h2></div>
     <div class="data-banner"><span class="i">💾</span><span>PAMFlow saves everything on this device automatically. Open this same file in your browser (or add it to your home screen) to keep your data — it won't carry over if you copy the file elsewhere.</span></div>
-    <div class="data-banner logo-banner"><span class="i">🖼️</span><span>Want each bank's real logo instead of an emoji? Create a <b>logos</b> folder next to this HTML file and add a PNG named after the account, lowercase with dashes for spaces — e.g. BDO → <b>logos/bdo.png</b>, GCash → <b>logos/gcash.png</b>. Recommended: 512×512px (min 128×128px), square 1:1, PNG with a transparent background. Missing logos just show the emoji icon, so it's totally optional.</span></div>
+    <div class="data-banner logo-banner"><span class="i">🖼️</span><span>Want each bank's real logo instead of an emoji? Create a <b>logos</b> folder next to this HTML file and add a PNG named after the bank, lowercase with dashes for spaces — e.g. BDO → <b>logos/bdo.png</b>, GCash → <b>logos/gcash.png</b>. Recommended: 512×512px (min 128×128px), square 1:1, PNG with a transparent background. Then use the <b>Bank logo</b> picker below to attach the right logo to any account, even if you gave the account a custom name (like "Maribank ACE"). Missing logos just show the emoji icon, so it's totally optional.</span></div>
 
     <div class="section-head"><h2 style="font-size:14px;">Include in home total</h2></div>
     <div id="settings-accounts"></div>
@@ -471,6 +492,7 @@ button{font-family:inherit; cursor:pointer;}
 <!-- ===== MODAL: Add/Edit Account ===== -->
 <div class="overlay" id="modal-account">
   <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-account')">✕</button>
     <div class="sheet-handle"></div>
     <h3 id="acct-modal-title">Add account</h3>
 
@@ -499,6 +521,11 @@ button{font-family:inherit; cursor:pointer;}
     </div>
 
     <div class="field">
+      <label>Bank logo</label>
+      <div class="logo-row" id="acct-logo-row"></div>
+    </div>
+
+    <div class="field">
       <label>Color</label>
       <div class="color-row" id="acct-color-row"></div>
     </div>
@@ -516,6 +543,7 @@ button{font-family:inherit; cursor:pointer;}
 <!-- ===== MODAL: Add Transaction ===== -->
 <div class="overlay" id="modal-txn">
   <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-txn')">✕</button>
     <div class="sheet-handle"></div>
     <h3>Add transaction</h3>
 
@@ -573,6 +601,7 @@ button{font-family:inherit; cursor:pointer;}
 <!-- ===== MODAL: Add Group ===== -->
 <div class="overlay" id="modal-group">
   <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-group')">✕</button>
     <div class="sheet-handle"></div>
     <h3 id="group-modal-title">Add group</h3>
     <div class="field">
@@ -585,6 +614,7 @@ button{font-family:inherit; cursor:pointer;}
 
 <div class="overlay" id="modal-classification">
   <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-classification')">✕</button>
     <div class="sheet-handle"></div>
     <h3 id="classification-modal-title">Add classification</h3>
     <div class="field">
@@ -598,6 +628,7 @@ button{font-family:inherit; cursor:pointer;}
 <!-- ===== MODAL: Move money between groups (reallocate) ===== -->
 <div class="overlay" id="modal-reallocate">
   <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-reallocate')">✕</button>
     <div class="sheet-handle"></div>
     <h3>Move money between groups</h3>
     <div class="data-banner" style="margin-bottom:14px;"><span class="i">↔️</span><span>This just re-labels money that's already in the account — it won't change the account's total balance. Use it to split existing money into groups, e.g. "5,000 is my own money, 3,000 is my mother's."</span></div>
@@ -686,34 +717,34 @@ if(!Array.isArray(state.classifications)) state.classifications = defaultClassif
 /* ============ PRESETS ============ */
 const PRESETS = {
   bank: [
-    {name:'BDO', icon:'🏦', color:'#5e1086'},
-    {name:'BPI', icon:'🏦', color:'#a05fba'},
-    {name:'Metrobank', icon:'🏦', color:'#7f5f8d'},
-    {name:'Landbank', icon:'🏦', color:'#5fba7a'},
-    {name:'PNB', icon:'🏦', color:'#ba5f8a'},
-    {name:'China Bank', icon:'🏦', color:'#c98a3f'},
-    {name:'RCBC', icon:'🏦', color:'#5f8aba'},
-    {name:'Security Bank', icon:'🏦', color:'#5fbaaf'},
-    {name:'UnionBank', icon:'🏦', color:'#8a5fba'},
-    {name:'EastWest Bank', icon:'🏦', color:'#ba8a5f'},
-    {name:'PSBank', icon:'🏦', color:'#5f7aba'},
+    {name:'BDO', slug:'bdo', icon:'🏦', color:'#5e1086'},
+    {name:'BPI', slug:'bpi', icon:'🏦', color:'#a05fba'},
+    {name:'Metrobank', slug:'metrobank', icon:'🏦', color:'#7f5f8d'},
+    {name:'Landbank', slug:'landbank', icon:'🏦', color:'#5fba7a'},
+    {name:'PNB', slug:'pnb', icon:'🏦', color:'#ba5f8a'},
+    {name:'China Bank', slug:'china-bank', icon:'🏦', color:'#c98a3f'},
+    {name:'RCBC', slug:'rcbc', icon:'🏦', color:'#5f8aba'},
+    {name:'Security Bank', slug:'security-bank', icon:'🏦', color:'#5fbaaf'},
+    {name:'UnionBank', slug:'unionbank', icon:'🏦', color:'#8a5fba'},
+    {name:'EastWest Bank', slug:'eastwest-bank', icon:'🏦', color:'#ba8a5f'},
+    {name:'PSBank', slug:'psbank', icon:'🏦', color:'#5f7aba'},
     {name:'Other bank…', icon:'🏦', color:'#5e1086', custom:true},
   ],
   digital: [
-    {name:'GCash', icon:'📱', color:'#5f8aba'},
-    {name:'Maya', icon:'📱', color:'#3fba7a'},
-    {name:'GoTyme Bank', icon:'📱', color:'#a05fba'},
-    {name:'CIMB Bank PH', icon:'📱', color:'#ba5f5f'},
-    {name:'Tonik', icon:'📱', color:'#e8b23d'},
-    {name:'SeaBank', icon:'📱', color:'#5fbaaf'},
-    {name:'UnionDigital', icon:'📱', color:'#7f5f8d'},
-    {name:'Komo', icon:'📱', color:'#5e1086'},
-    {name:'Maribank', icon:'📱', color:'#3f7fba'},
+    {name:'GCash', slug:'gcash', icon:'📱', color:'#5f8aba'},
+    {name:'Maya', slug:'maya', icon:'📱', color:'#3fba7a'},
+    {name:'GoTyme Bank', slug:'gotyme-bank', icon:'📱', color:'#a05fba'},
+    {name:'CIMB Bank PH', slug:'cimb-bank-ph', icon:'📱', color:'#ba5f5f'},
+    {name:'Tonik', slug:'tonik', icon:'📱', color:'#e8b23d'},
+    {name:'SeaBank', slug:'seabank', icon:'📱', color:'#5fbaaf'},
+    {name:'UnionDigital', slug:'uniondigital', icon:'📱', color:'#7f5f8d'},
+    {name:'Komo', slug:'komo', icon:'📱', color:'#5e1086'},
+    {name:'Maribank', slug:'maribank', icon:'📱', color:'#3f7fba'},
     {name:'Other digital bank…', icon:'📱', color:'#5e1086', custom:true},
   ],
   cash: [
-    {name:'Cash Wallet', icon:'💵', color:'#c98a3f'},
-    {name:'Petty Cash', icon:'👛', color:'#ba8a5f'},
+    {name:'Cash Wallet', slug:'cash-wallet', icon:'💵', color:'#c98a3f'},
+    {name:'Petty Cash', slug:'petty-cash', icon:'👛', color:'#ba8a5f'},
     {name:'Other cash…', icon:'💵', color:'#c98a3f', custom:true},
   ]
 };
@@ -731,7 +762,10 @@ function slugify(name){
   return (name||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
 }
 function avatarInner(a){
-  const slug = slugify(a.name);
+  if(a.logo === ''){
+    return `<span class="icon-fallback" style="display:flex;">${a.icon}</span>`;
+  }
+  const slug = a.logo || slugify(a.name);
   return `<img src="logos/${slug}.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit;">
   <span class="icon-fallback" style="display:none;">${a.icon}</span>`;
 }
@@ -1174,12 +1208,12 @@ function exportCSV(){
 }
 
 /* ============ MODAL: ACCOUNT ============ */
-let acctModalState = { type:'bank', icon:'🏦', color:PALETTE[0], editId:null };
+let acctModalState = { type:'bank', icon:'🏦', color:PALETTE[0], logo:null, editId:null };
 
 function openAccountModal(presetType, editId){
   const acc = editId ? getAccount(editId) : null;
-  acctModalState = acc ? {type:acc.type, icon:acc.icon, color:acc.color, editId:editId}
-                       : {type: presetType||'bank', icon:'🏦', color:PALETTE[0], editId:null};
+  acctModalState = acc ? {type:acc.type, icon:acc.icon, color:acc.color, logo:(acc.logo!==undefined?acc.logo:null), editId:editId}
+                       : {type: presetType||'bank', icon:'🏦', color:PALETTE[0], logo:null, editId:null};
   document.getElementById('acct-modal-title').textContent = acc ? 'Edit account' : 'Add account';
   document.getElementById('acct-name').value = acc ? acc.name : '';
   document.getElementById('acct-opening').value = acc ? (acc.opening||0) : '';
@@ -1190,6 +1224,7 @@ function openAccountModal(presetType, editId){
   renderPresetGrid();
   renderEmojiRow();
   renderColorRow();
+  renderLogoRow();
   showOverlay('modal-account');
 }
 function renderAcctTypeSeg(){
@@ -1202,14 +1237,18 @@ function renderAcctTypeSeg(){
 function renderPresetGrid(){
   const grid = document.getElementById('preset-grid');
   const list = PRESETS[acctModalState.type] || [];
-  grid.innerHTML = list.map((p,i)=>`<div class="preset-item" onclick="applyPreset(${i})"><div class="av" style="background:${p.color}">${p.icon}</div><span>${p.name.replace('…','')}</span></div>`).join('');
+  grid.innerHTML = list.map((p,i)=> p.custom
+    ? `<div class="preset-item" onclick="applyPreset(${i})"><div class="av" style="background:${p.color}">${p.icon}</div><span>${p.name.replace('…','')}</span></div>`
+    : `<div class="preset-item" onclick="applyPreset(${i})"><div class="av" style="background:${p.color}"><img src="logos/${p.slug}.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit;"><span style="display:none;">${p.icon}</span></div><span>${p.name.replace('…','')}</span></div>`
+  ).join('');
 }
 function applyPreset(i){
   const p = (PRESETS[acctModalState.type]||[])[i];
   if(!p) return;
   acctModalState.icon = p.icon; acctModalState.color = p.color;
+  acctModalState.logo = p.custom ? null : p.slug;
   document.getElementById('acct-name').value = p.custom ? '' : p.name;
-  renderEmojiRow(); renderColorRow();
+  renderEmojiRow(); renderColorRow(); renderLogoRow();
 }
 function renderEmojiRow(){
   const row = document.getElementById('acct-emoji-row');
@@ -1222,15 +1261,35 @@ function renderColorRow(){
 }
 function pickColor(c){ acctModalState.color=c; renderColorRow(); }
 
+function allLogoChoices(){
+  const seen = new Set(); const list = [];
+  Object.values(PRESETS).forEach(arr=>arr.forEach(p=>{
+    if(p.custom || seen.has(p.slug)) return;
+    seen.add(p.slug); list.push(p);
+  }));
+  return list;
+}
+function renderLogoRow(){
+  const row = document.getElementById('acct-logo-row');
+  if(!row) return;
+  const isAuto = acctModalState.logo===null || acctModalState.logo===undefined;
+  const isNone = acctModalState.logo==='';
+  let html = `<button type="button" class="logo-opt ${isAuto?'active':''}" onclick="pickLogo(null)"><span class="logo-opt-fallback">🔤</span><small>Auto</small></button>`;
+  html += `<button type="button" class="logo-opt ${isNone?'active':''}" onclick="pickLogo('')"><span class="logo-opt-fallback">${acctModalState.icon}</span><small>Icon only</small></button>`;
+  html += allLogoChoices().map(p=>`<button type="button" class="logo-opt ${acctModalState.logo===p.slug?'active':''}" onclick="pickLogo('${p.slug}')"><img src="logos/${p.slug}.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="logo-opt-fallback" style="display:none;">${p.icon}</span><small>${escapeHtml(p.name.replace('…',''))}</small></button>`).join('');
+  row.innerHTML = html;
+}
+function pickLogo(slug){ acctModalState.logo = slug; renderLogoRow(); }
+
 function saveAccount(){
   const name = document.getElementById('acct-name').value.trim();
   if(!name){ toast('Give this account a name'); return; }
   if(acctModalState.editId){
     const acc = getAccount(acctModalState.editId);
-    acc.name = name; acc.type = acctModalState.type; acc.icon = acctModalState.icon; acc.color = acctModalState.color;
+    acc.name = name; acc.type = acctModalState.type; acc.icon = acctModalState.icon; acc.color = acctModalState.color; acc.logo = acctModalState.logo;
   } else {
     const opening = parseFloat(document.getElementById('acct-opening').value) || 0;
-    const newAcc = { id: uid(), name, type: acctModalState.type, icon: acctModalState.icon, color: acctModalState.color, opening, groups: [] };
+    const newAcc = { id: uid(), name, type: acctModalState.type, icon: acctModalState.icon, color: acctModalState.color, logo: acctModalState.logo, opening, groups: [] };
     state.accounts.push(newAcc);
     state.settings.includedAccounts.push(newAcc.id);
   }

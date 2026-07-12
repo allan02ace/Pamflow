@@ -1,11 +1,22 @@
 // PAMFlow service worker — caches the app shell so it works fully offline.
-const CACHE_NAME = 'pamflow-cache-v1';
+const CACHE_NAME = 'pamflow-cache-v2';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './fonts/baloo-2-latin-500-normal.woff2',
+  './fonts/baloo-2-latin-600-normal.woff2',
+  './fonts/baloo-2-latin-700-normal.woff2',
+  './fonts/baloo-2-latin-800-normal.woff2',
+  './fonts/nunito-latin-400-normal.woff2',
+  './fonts/nunito-latin-500-normal.woff2',
+  './fonts/nunito-latin-600-normal.woff2',
+  './fonts/nunito-latin-700-normal.woff2',
+  './fonts/nunito-latin-800-normal.woff2',
+  './fonts/dm-mono-latin-400-normal.woff2',
+  './fonts/dm-mono-latin-500-normal.woff2'
 ];
 
 // Install: pre-cache the app shell

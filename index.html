@@ -11,9 +11,20 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%B1%3C/text%3E%3C/svg%3E">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===== Self-hosted fonts (work fully offline) ===== */
+@font-face{font-family:'Baloo 2'; font-style:normal; font-weight:500; font-display:swap; src: url('./fonts/baloo-2-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'Baloo 2'; font-style:normal; font-weight:600; font-display:swap; src: url('./fonts/baloo-2-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'Baloo 2'; font-style:normal; font-weight:700; font-display:swap; src: url('./fonts/baloo-2-latin-700-normal.woff2') format('woff2');}
+@font-face{font-family:'Baloo 2'; font-style:normal; font-weight:800; font-display:swap; src: url('./fonts/baloo-2-latin-800-normal.woff2') format('woff2');}
+@font-face{font-family:'Nunito'; font-style:normal; font-weight:400; font-display:swap; src: url('./fonts/nunito-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'Nunito'; font-style:normal; font-weight:500; font-display:swap; src: url('./fonts/nunito-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'Nunito'; font-style:normal; font-weight:600; font-display:swap; src: url('./fonts/nunito-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'Nunito'; font-style:normal; font-weight:700; font-display:swap; src: url('./fonts/nunito-latin-700-normal.woff2') format('woff2');}
+@font-face{font-family:'Nunito'; font-style:normal; font-weight:800; font-display:swap; src: url('./fonts/nunito-latin-800-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Mono'; font-style:normal; font-weight:400; font-display:swap; src: url('./fonts/dm-mono-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'DM Mono'; font-style:normal; font-weight:500; font-display:swap; src: url('./fonts/dm-mono-latin-500-normal.woff2') format('woff2');}
+</style>
 <style>
 :root{
   --main:#5e1086;
@@ -514,6 +525,7 @@ button{font-family:inherit; cursor:pointer;}
 <button class="btn-secondary" onclick="openClassificationModal(classificationSettingsType)">+ Add classification</button>
 
     <div class="section-head"><h2 style="font-size:14px;">Data</h2></div>
+    <div id="last-backup-note" style="font-size:12px; color:var(--ink-soft); font-weight:600; margin:-2px 2px 10px;"></div>
     <button class="btn-secondary" onclick="exportBackup()">⬇️ Export backup (JSON)</button>
     <button class="btn-secondary" onclick="triggerImport()">⬆️ Import backup (JSON)</button>
     <input type="file" id="import-file-input" accept="application/json" style="display:none" onchange="importBackup(event)">
@@ -1243,10 +1255,29 @@ function exportBackup(){
   const blob = new Blob([dataStr], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `pamflow-backup-${todayStr()}.json`;
+  a.href = url; a.download = `pamflow-backup-${backupFileStamp()}.json`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  state.settings.lastBackupAt = Date.now();
+  saveState();
+  renderLastBackupNote();
   toast('Backup exported');
+}
+// e.g. 2026-07-12_1503 — safe for filenames, sortable, includes time so exports never collide
+function backupFileStamp(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+function renderLastBackupNote(){
+  const el = document.getElementById('last-backup-note');
+  if(!el) return;
+  const ts = state.settings.lastBackupAt;
+  if(!ts){ el.textContent = 'No backup exported yet'; return; }
+  const d = new Date(ts);
+  const dateStr = d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+  const timeStr = d.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
+  el.textContent = `Last backup: ${dateStr} at ${timeStr}`;
 }
 function triggerImport(){ document.getElementById('import-file-input').click(); }
 function importBackup(e){
@@ -1680,6 +1711,7 @@ function renderClassificationSettings(){
 }
 function renderSettings(){
   applyHideAmountsUI();
+  renderLastBackupNote();
   const nameInput = document.getElementById('settings-username');
   if(nameInput && document.activeElement !== nameInput) nameInput.value = state.settings.userName || '';
   renderClassificationSettings();

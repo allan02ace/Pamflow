@@ -370,7 +370,6 @@ button{font-family:inherit; cursor:pointer;}
   border-radius:12px; padding:9px 12px; margin-bottom:14px; line-height:1.4; display:flex; gap:8px; align-items:flex-start;
 }
 .data-banner span.i{font-size:15px;}
-.data-banner.logo-banner{background:#e8f4ff; border-color:#b8dcf5; color:#1f5a80;}
 
 /* ===== Data / export buttons ===== */
 .btn-row{display:flex; gap:8px;}
@@ -378,6 +377,7 @@ button{font-family:inherit; cursor:pointer;}
 
 /* ===== Stats ===== */
 .stat-toggle-wrap{margin: 14px 0 4px;}
+.stats-custom-range{display:flex; gap:10px; margin: 12px 2px 4px;}
 .stat-cards{display:flex; gap:10px; margin-bottom:6px;}
 .stat-card{
   flex:1; background:var(--card); border-radius:var(--radius-sm); border:1px solid var(--line);
@@ -433,6 +433,17 @@ button{font-family:inherit; cursor:pointer;}
       <div class="seg" id="stats-period-seg">
         <button data-v="month" class="active" onclick="setStatsPeriod('month')">This month</button>
         <button data-v="all" onclick="setStatsPeriod('all')">All time</button>
+        <button data-v="custom" onclick="setStatsPeriod('custom')">Custom</button>
+      </div>
+    </div>
+    <div class="stats-custom-range" id="stats-custom-range" style="display:none;">
+      <div class="field" style="flex:1; margin-bottom:0;">
+        <label>From</label>
+        <input type="date" id="stats-custom-start" onchange="applyCustomRange()">
+      </div>
+      <div class="field" style="flex:1; margin-bottom:0;">
+        <label>To</label>
+        <input type="date" id="stats-custom-end" onchange="applyCustomRange()">
       </div>
     </div>
     <div class="stat-cards">
@@ -440,9 +451,9 @@ button{font-family:inherit; cursor:pointer;}
       <div class="stat-card expense"><div class="lbl">Expenses</div><div class="val mono" id="stats-expense">₱0.00</div></div>
       <div class="stat-card"><div class="lbl">Net</div><div class="val mono" id="stats-net">₱0.00</div></div>
     </div>
-    <div class="section-head"><h2 style="font-size:14px;">Expenses by group</h2></div>
+    <div class="section-head"><h2 style="font-size:14px;">Expenses by classification</h2></div>
     <div id="stats-expense-groups"></div>
-    <div class="section-head"><h2 style="font-size:14px;">Income by group</h2></div>
+    <div class="section-head"><h2 style="font-size:14px;">Income by classification</h2></div>
     <div id="stats-income-groups"></div>
   </div>
 
@@ -459,7 +470,6 @@ button{font-family:inherit; cursor:pointer;}
   <div class="view hidden" id="view-settings">
     <div class="section-head" style="margin-top:16px;"><h2>Settings</h2></div>
     <div class="data-banner"><span class="i">💾</span><span>PAMFlow saves everything on this device automatically. Open this same file in your browser (or add it to your home screen) to keep your data — it won't carry over if you copy the file elsewhere.</span></div>
-    <div class="data-banner logo-banner"><span class="i">🖼️</span><span>Want each bank's real logo instead of an emoji? Create a <b>logos</b> folder next to this HTML file and add a PNG named after the bank, lowercase with dashes for spaces — e.g. BDO → <b>logos/bdo.png</b>, GCash → <b>logos/gcash.png</b>. Recommended: 512×512px (min 128×128px), square 1:1, PNG with a transparent background. Then use the <b>Bank logo</b> picker below to attach the right logo to any account, even if you gave the account a custom name (like "Maribank ACE"). Missing logos just show the emoji icon, so it's totally optional.</span></div>
 
     <div class="section-head"><h2 style="font-size:14px;">Include in home total</h2></div>
     <div id="settings-accounts"></div>
@@ -736,9 +746,7 @@ const PRESETS = {
     {name:'GoTyme Bank', slug:'gotyme-bank', icon:'📱', color:'#a05fba'},
     {name:'CIMB Bank PH', slug:'cimb-bank-ph', icon:'📱', color:'#ba5f5f'},
     {name:'Tonik', slug:'tonik', icon:'📱', color:'#e8b23d'},
-    {name:'SeaBank', slug:'seabank', icon:'📱', color:'#5fbaaf'},
     {name:'UnionDigital', slug:'uniondigital', icon:'📱', color:'#7f5f8d'},
-    {name:'Komo', slug:'komo', icon:'📱', color:'#5e1086'},
     {name:'Maribank', slug:'maribank', icon:'📱', color:'#3f7fba'},
     {name:'Other digital bank…', icon:'📱', color:'#5e1086', custom:true},
   ],
@@ -1100,24 +1108,48 @@ function deleteGroup(accId, groupId){
 
 /* ============ RENDER: STATS ============ */
 let statsPeriod = 'month';
+let statsCustomStart = null, statsCustomEnd = null;
 function setStatsPeriod(p){
   statsPeriod = p;
   [...document.getElementById('stats-period-seg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===p));
+  const rangeEl = document.getElementById('stats-custom-range');
+  if(p==='custom'){
+    rangeEl.style.display = 'flex';
+    if(!statsCustomStart) statsCustomStart = todayStr().slice(0,8)+'01';
+    if(!statsCustomEnd) statsCustomEnd = todayStr();
+    document.getElementById('stats-custom-start').value = statsCustomStart;
+    document.getElementById('stats-custom-end').value = statsCustomEnd;
+  } else {
+    rangeEl.style.display = 'none';
+  }
+  renderStats();
+}
+function applyCustomRange(){
+  const start = document.getElementById('stats-custom-start').value;
+  const end = document.getElementById('stats-custom-end').value;
+  if(!start || !end){ toast('Pick both dates'); return; }
+  if(start > end){ toast('"From" date must be before "To" date'); return; }
+  statsCustomStart = start; statsCustomEnd = end;
   renderStats();
 }
 function computeStats(period){
   const monthStr = todayStr().slice(0,7);
   let income=0, expense=0;
-  const incomeByGroup = {}, expenseByGroup = {}; // keyed by classification name (global)
+  const incomeByClass = {}, expenseByClass = {}; // keyed by income/expense classification name
   state.transactions.forEach(t=>{
     if(t.type==='transfer' || t.type==='reallocate') return;
-    if(period==='month' && !(t.date||'').startsWith(monthStr)) return;
+    const d = t.date||'';
+    if(period==='month' && !d.startsWith(monthStr)) return;
+    if(period==='custom'){
+      if(statsCustomStart && d < statsCustomStart) return;
+      if(statsCustomEnd && d > statsCustomEnd) return;
+    }
     const cls = t.classificationId ? getClassification(t.classificationId) : null;
     const cname = cls ? cls.name : 'Unclassified';
-    if(t.type==='income'){ income += t.amount; incomeByGroup[cname] = (incomeByGroup[cname]||0)+t.amount; }
-    else { expense += t.amount; expenseByGroup[cname] = (expenseByGroup[cname]||0)+t.amount; }
+    if(t.type==='income'){ income += t.amount; incomeByClass[cname] = (incomeByClass[cname]||0)+t.amount; }
+    else { expense += t.amount; expenseByClass[cname] = (expenseByClass[cname]||0)+t.amount; }
   });
-  return {income, expense, incomeByGroup, expenseByGroup};
+  return {income, expense, incomeByClass, expenseByClass};
 }
 function groupBarsHTML(map, color){
   const entries = Object.entries(map).sort((a,b)=>b[1]-a[1]);
@@ -1130,14 +1162,14 @@ function groupBarsHTML(map, color){
     </div>`).join('');
 }
 function renderStats(){
-  const {income, expense, incomeByGroup, expenseByGroup} = computeStats(statsPeriod);
+  const {income, expense, incomeByClass, expenseByClass} = computeStats(statsPeriod);
   document.getElementById('stats-income').textContent = peso(income);
   document.getElementById('stats-expense').textContent = peso(expense);
   const netEl = document.getElementById('stats-net');
   netEl.textContent = peso(income-expense);
   netEl.classList.toggle('neg-text', (income-expense)<0);
-  document.getElementById('stats-expense-groups').innerHTML = groupBarsHTML(expenseByGroup, 'var(--coral)');
-  document.getElementById('stats-income-groups').innerHTML = groupBarsHTML(incomeByGroup, 'var(--teal-dark)');
+  document.getElementById('stats-expense-groups').innerHTML = groupBarsHTML(expenseByClass, 'var(--coral)');
+  document.getElementById('stats-income-groups').innerHTML = groupBarsHTML(incomeByClass, 'var(--teal-dark)');
 }
 
 /* ============ DATA EXPORT / IMPORT ============ */

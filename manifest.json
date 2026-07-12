@@ -1,0 +1,25 @@
+{
+  "name": "PAMFlow — Money Tracker",
+  "short_name": "PAMFlow",
+  "description": "Track your accounts, budgets, and transactions.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffe8ff",
+  "theme_color": "#5e1086",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

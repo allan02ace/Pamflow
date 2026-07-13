@@ -1066,6 +1066,32 @@ window.storage = (function () {
   let maxSpeedMs = 0;
   let speedSamples = []; // in m/s, time-weighted-ish (simple avg)
   let currentSpeedMs = 0;
+
+  // ---------- Kalman Filter ----------
+let kalmanEstimate = 0;
+let kalmanError = 1;
+
+const KALMAN_Q = 0.08;   // process noise
+const KALMAN_R = 2.5;    // measurement noise
+
+function kalmanSpeed(measurement){
+
+    kalmanError += KALMAN_Q;
+
+    const gain =
+        kalmanError /
+        (kalmanError + KALMAN_R);
+
+    kalmanEstimate =
+        kalmanEstimate +
+        gain * (measurement - kalmanEstimate);
+
+    kalmanError =
+        (1 - gain) * kalmanError;
+
+    return kalmanEstimate;
+}
+
   let sessionPath = []; // [{lat, lon, t (sec offset), v (m/s), d (meters so far)}]
   let lastPathSample = null; // {lat, lon, t}
   let demoLat = 0, demoLon = 0, demoHeading = 0;
@@ -1512,7 +1538,7 @@ window.storage = (function () {
     let source='';
     if(rawSpeed!==null && acc!==null && acc<=15 && isPlausibleSpeed(rawSpeed,dt,currentSpeedMs)){instSpeed=rawSpeed;source='GPS Device';}
     else if(calcSpeed!==null && isPlausibleSpeed(calcSpeed,dt,currentSpeedMs)){instSpeed=calcSpeed;source='GPS Calculated';}
-    else {instSpeed=currentSpeedMs*0.9;source='Filtered';}
+    else {instSpeed=currentSpeedMs;source="Holding previous";}
 
     // Reject an implausible instantaneous reading (GPS multipath spike, bad
     // fix near tunnels/tall buildings, etc.) instead of letting one bad
@@ -1529,21 +1555,99 @@ window.storage = (function () {
     updateDebugPanel({ rawSpeed, calcSpeed, source, accuracy: acc, dt, dist: d });
 
     if(instSpeed !== null){
-      const alpha=0.25;
-    currentSpeedMs=currentSpeedMs+alpha*(instSpeed-currentSpeedMs);
-      updateReadout(instSpeed);
+      // Kalman filter
+instSpeed = kalmanSpeed(instSpeed);
+
+// Adaptive smoothing
+let diff = Math.abs(instSpeed-currentSpeedMs);
+
+let alpha;
+
+if(diff < 1){
+    alpha = 0.05;
+}
+else if(diff < 3){
+    alpha = 0.10;
+}
+else if(diff < 8){
+    alpha = 0.18;
+}
+else if(diff < 15){
+    alpha = 0.35;
+}
+else{
+    alpha = 0.60;
+}
+
+currentSpeedMs +=
+    alpha *
+    (instSpeed-currentSpeedMs);
+
+updateReadout(currentSpeedMs);
+
       const isPaused = checkAutoPause(instSpeed, now);
       if(!isPaused){
-        maxSpeedMs = Math.max(maxSpeedMs, instSpeed);
+        if(
+instSpeed>1 &&
+acc!==null &&
+acc<15
+){
+    maxSpeedMs=Math.max(maxSpeedMs,currentSpeedMs);
+}
         if(dt !== null){
           speedSamples.push({ v: instSpeed, dt: Math.min(dt, MAX_SAMPLE_WEIGHT_S) });
         }
       }
     }
 
-    setGpsStatus(paused ? 'paused' : 'live', paused
-      ? (manualPaused ? 'Paused · tap Resume to continue' : 'Auto-paused · resume by moving')
-      : (acc !== null ? `GPS Live · ±${acc}m` : 'GPS Live'));
+    let gpsText = "GPS";
+let gpsState = "live";
+
+if(acc !== null){
+
+    if(acc <= 5){
+        gpsText = `🟢 Excellent · ±${acc}m`;
+        gpsState = "excellent";
+    }
+    else if(acc <= 10){
+        gpsText = `🟢 Good · ±${acc}m`;
+        gpsState = "good";
+    }
+    else if(acc <= 20){
+        gpsText = `🟡 Fair · ±${acc}m`;
+        gpsState = "fair";
+    }
+    else if(acc <= 35){
+        gpsText = `🟠 Weak · ±${acc}m`;
+        gpsState = "weak";
+    }
+    else{
+        gpsText = `🔴 Poor · ±${acc}m`;
+        gpsState = "error";
+    }
+
+}else{
+
+    gpsText = "Searching...";
+}
+
+if(paused){
+
+    setGpsStatus(
+        "paused",
+        manualPaused
+            ? "Paused"
+            : "Auto-paused"
+    );
+
+}else{
+
+    setGpsStatus(
+        gpsState,
+        gpsText
+    );
+
+}
 
     const tSec = sessionStart ? (now - sessionStart)/1000 : 0;
     if(!paused){
@@ -1676,8 +1780,8 @@ window.storage = (function () {
 
     watchId = navigator.geolocation.watchPosition(handlePosition, handleGeoError, {
       enableHighAccuracy: true,
-      maximumAge: 1000,
-      timeout: 15000
+      maximumAge: 0,
+      timeout: 10000
     });
   }
 

@@ -1084,6 +1084,14 @@ window.storage = (function () {
   // GPS accuracy filtering
   const MAX_ACCURACY_M = 35;
 
+  // Speed plausibility filtering — rejects single bad fixes (multipath spikes,
+  // bad triangulation) instead of letting them permanently inflate max speed
+  // or skew the average. Both ceilings are deliberately generous so real
+  // riding/driving is never mistaken for a bad fix.
+  const MAX_PLAUSIBLE_SPEED_MS = 97;   // ~350 km/h — no road vehicle should exceed this
+  const MAX_ACCEL_MS2 = 15;            // ~1.5g — well above real accel/braking, catches instant jumps
+  const MAX_SAMPLE_WEIGHT_S = 10;      // cap one sample's weight in the time-weighted average
+
   // wake lock
   let wakeLock = null;
 
@@ -1324,7 +1332,7 @@ window.storage = (function () {
     }
     els.statTime.textContent = formatDuration(elapsed);
     els.statTotalTime.textContent = formatDuration(totalElapsed);
-    const avgMs = speedSamples.length ? speedSamples.reduce((a,b)=>a+b,0)/speedSamples.length : 0;
+    const avgMs = weightedAvgSpeed(speedSamples);
     els.statAvg.textContent = Math.round(msToUnit(avgMs));
     els.statMax.textContent = Math.round(msToUnit(maxSpeedMs));
   }
@@ -1405,6 +1413,33 @@ window.storage = (function () {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
 
+  // Rejects a candidate instantaneous speed if it's outright impossible, or if
+  // it implies unrealistic acceleration from the last accepted reading given
+  // how little time has passed. dtSec may be null (first fix of a session) —
+  // in that case only the flat ceiling applies, since there's no reference
+  // reading yet to compare acceleration against.
+  function isPlausibleSpeed(candidate, dtSec, referenceMs){
+    if(candidate === null || !Number.isFinite(candidate) || candidate < 0) return false;
+    if(candidate > MAX_PLAUSIBLE_SPEED_MS) return false;
+    if(dtSec !== null && dtSec > 0 && dtSec < 10){
+      const maxDelta = MAX_ACCEL_MS2 * dtSec;
+      if(Math.abs(candidate - referenceMs) > maxDelta) return false;
+    }
+    return true;
+  }
+
+  // Time-weighted mean so average speed reflects time actually spent at each
+  // reading rather than being skewed by however densely GPS fixes happened to
+  // land. Samples are {v, dt} pairs; falls back to a plain mean only if every
+  // sample somehow carries zero weight.
+  function weightedAvgSpeed(samples){
+    if(!samples.length) return 0;
+    let sumWV = 0, sumW = 0;
+    for(const s of samples){ sumWV += s.v * s.dt; sumW += s.dt; }
+    return sumW > 0 ? sumWV / sumW : samples.reduce((a,b)=>a+b.v,0)/samples.length;
+  }
+
+
   // ---------- geolocation ----------
   function maybeSamplePath(lat, lon, tSec, speedMs){
     const last = lastPathSample;
@@ -1459,14 +1494,29 @@ window.storage = (function () {
       if(dt > 0){
         calcSpeed = d / dt;
       }
-      if(dt > 0 && d < 1000 && !paused){ // ignore GPS jumps, and don't accrue while auto-paused
+      // Reject the jump for distance purposes based on the speed it implies,
+      // not a fixed distance cutoff — a fixed "d < 1000m" threshold either
+      // rejects a legitimate large jump after a throttled gap (undercounting
+      // distance) or accepts a physically-impossible jump that happens to
+      // land under 1000m (corrupting distance from a single bad fix).
+      if(dt > 0 && calcSpeed !== null && calcSpeed <= MAX_PLAUSIBLE_SPEED_MS && !paused){
         distanceM += d;
       }
     }
-    lastPos = { lat: latitude, lon: longitude, t: now };
 
-    const instSpeed = rawSpeed !== null ? rawSpeed : calcSpeed;
-    const source = rawSpeed !== null ? 'device (coords.speed)' : (calcSpeed !== null ? 'calculated (distance÷time)' : 'no data yet');
+    let instSpeed = rawSpeed !== null ? rawSpeed : calcSpeed;
+    let source = rawSpeed !== null ? 'device (coords.speed)' : (calcSpeed !== null ? 'calculated (distance÷time)' : 'no data yet');
+
+    // Reject an implausible instantaneous reading (GPS multipath spike, bad
+    // fix near tunnels/tall buildings, etc.) instead of letting one bad
+    // sample permanently inflate max speed or skew the average — keep
+    // showing the last good reading until a plausible one arrives.
+    if(instSpeed !== null && !isPlausibleSpeed(instSpeed, dt, currentSpeedMs)){
+      source += ' · rejected (implausible jump)';
+      instSpeed = null;
+    }
+
+    lastPos = { lat: latitude, lon: longitude, t: now };
 
     updateDebugPanel({ rawSpeed, calcSpeed, source, accuracy: acc, dt, dist: d });
 
@@ -1476,7 +1526,9 @@ window.storage = (function () {
       const isPaused = checkAutoPause(instSpeed, now);
       if(!isPaused){
         maxSpeedMs = Math.max(maxSpeedMs, instSpeed);
-        speedSamples.push(instSpeed);
+        if(dt !== null){
+          speedSamples.push({ v: instSpeed, dt: Math.min(dt, MAX_SAMPLE_WEIGHT_S) });
+        }
       }
     }
 
@@ -1567,7 +1619,7 @@ window.storage = (function () {
 
       if(!isPaused){
         maxSpeedMs = Math.max(maxSpeedMs, simMs);
-        speedSamples.push(simMs);
+        speedSamples.push({ v: simMs, dt: 1 }); // fixed 1s tick, so this is already time-uniform
         distanceM += simMs;
 
         // gentle random-walk heading so the route curves like real streets
@@ -1644,7 +1696,7 @@ window.storage = (function () {
         }else if(lastPos){
           maybeSamplePathForce(lastPos.lat, lastPos.lon, duration, currentSpeedMs);
         }
-        const avgMs = speedSamples.length ? speedSamples.reduce((a,b)=>a+b,0)/speedSamples.length : 0;
+        const avgMs = weightedAvgSpeed(speedSamples);
         await saveSession({
           id: Date.now().toString(36),
           date: Date.now(),
@@ -2247,12 +2299,20 @@ window.storage = (function () {
     }
 
     const arr = await loadFuel();
-    arr.push({ id: Date.now().toString(36), date: Date.now(), odo, liters, full });
+    const entry = { id: Date.now().toString(36), date: Date.now(), odo, liters, full };
+    arr.push(entry);
     arr.sort((a,b)=> a.odo - b.odo);
     await saveFuelArr(arr);
     els.odoInput.value = ''; els.litersInput.value = '';
     els.fuelFullCheck.checked = true;
     renderFuel();
+
+    // Let a host app embedding this page (e.g. PAMFlow) know a fuel entry was
+    // logged, so it can offer to record it as an expense. Harmless no-op when
+    // opened standalone (not inside an iframe).
+    if(window.parent && window.parent !== window){
+      window.parent.postMessage({ source:'velocity-log', type:'fuel-logged', entry }, '*');
+    }
   });
 
   els.fuelClearAll.addEventListener('click', async ()=>{

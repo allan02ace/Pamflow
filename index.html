@@ -302,6 +302,8 @@ button{font-family:inherit; cursor:pointer;}
 .txn-amt.pos{color:var(--color-success);}
 .txn-amt.neg{color:var(--color-danger);}
 .txn-del{border:none;background:none;color:var(--ink-soft); font-size:15px; padding:4px;}
+.txn-edit{border:none;background:none;color:var(--ink-soft); font-size:15px; padding:4px;}
+.txn-actions{display:flex; align-items:center; gap:2px; flex-shrink:0;}
 
 .filterbar{display:flex; gap:8px; overflow-x:auto; padding: 2px 0 14px; scrollbar-width:none;}
 .filterbar::-webkit-scrollbar{display:none;}
@@ -379,6 +381,7 @@ button{font-family:inherit; cursor:pointer;}
 .velocity-launch-btn.riding .ping{display:block;}
 .field{margin-bottom:14px;}
 .field label{display:block; font-size:12.5px; font-weight:800; color:var(--main-dark); margin-bottom:6px; text-transform:uppercase; letter-spacing:.3px;}
+.field-hint{display:block; font-size:11.5px; font-weight:500; color:var(--ink-soft); text-transform:none; letter-spacing:normal; margin:-3px 0 7px;}
 .field input[type=text], .field input[type=number], .field input[type=date], .field select, .field textarea{
   width:100%; border:2px solid var(--line); background:#fff; border-radius:14px; padding:11px 13px;
   font-family:'Nunito'; font-size:15px; font-weight:600; color:var(--ink); outline:none;
@@ -453,6 +456,9 @@ button{font-family:inherit; cursor:pointer;}
 .acc-opt .av{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff; flex-shrink:0; position:relative; overflow:hidden;}
 .acc-opt .av .icon-fallback{width:100%; height:100%; align-items:center; justify-content:center;}
 .acc-opt span{font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.acc-opt .info{display:flex; flex-direction:column; gap:1px; overflow:hidden; min-width:0;}
+.acc-opt .info .name{font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.acc-opt .info .bal{font-size:10.5px; font-weight:600; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
 /* settings */
 .settings-card{background:var(--card); border-radius:var(--radius-sm); border:1px solid var(--line); box-shadow:var(--shadow-sm); padding:6px 4px; margin-bottom:14px;}
@@ -499,11 +505,11 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
    icons, toggles) for visual balance. Rather than resizing them and
    disturbing the layout, we expand the invisible *hit area* with a centered
    pseudo-element so nothing looks different but everything is easy to tap. */
-.icon-btn, .back-btn, .sub-add-btn, .txn-del, .mini-add, .chip, .navbtn, .switch, .seg button{
+.icon-btn, .back-btn, .sub-add-btn, .txn-del, .txn-edit, .mini-add, .chip, .navbtn, .switch, .seg button{
   position:relative;
 }
 .icon-btn::after, .back-btn::after, .sheet-close::after, .gear::after,
-.sub-add-btn::after, .txn-del::after, .mini-add::after, .chip::after,
+.sub-add-btn::after, .txn-del::after, .txn-edit::after, .mini-add::after, .chip::after,
 .navbtn::after, .switch::after, .seg button::after{
   content:''; position:absolute; top:50%; left:50%;
   width:max(100%, 44px); height:max(100%, 44px);
@@ -853,7 +859,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
   <div class="sheet">
     <button class="sheet-close" onclick="hideOverlay('modal-txn')" aria-label="Close transaction form">✕</button>
     <div class="sheet-handle"></div>
-    <h3>Add transaction</h3>
+    <h3 id="txn-modal-title">Add transaction</h3>
 
     <div class="field">
       <div class="seg" id="txn-type-seg">
@@ -873,19 +879,10 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
       <div class="acc-select-grid" id="txn-to-grid" role="group" aria-labelledby="txn-to-label"></div>
     </div>
 
-    <div class="field">
-      <label for="txn-amount">Amount</label>
-      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="txn-amount" aria-label="Transaction amount in Philippine pesos" placeholder="0.00"></div>
-    </div>
-
-    <div class="field" id="txn-classification-field">
-      <label for="txn-classification-select">Classification</label>
-      <select id="txn-classification-select"></select>
-    </div>
-
     <div class="field" id="txn-group-field">
-      <label for="txn-group-select">Group</label>
-      <select id="txn-group-select"><option value="">Unrestricted</option></select>
+      <label id="txn-group-label">Group</label>
+      <select id="txn-group-select" style="display:none;"><option value="">Main Balance</option></select>
+      <div class="acc-select-grid" id="txn-group-grid" role="group" aria-labelledby="txn-group-label"></div>
     </div>
     <div class="field" id="txn-subgroup-field" style="display:none;">
       <label for="txn-subgroup-select">Subgroup</label>
@@ -893,13 +890,29 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     </div>
 
     <div class="field">
+      <label for="txn-amount">Amount</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="txn-amount" aria-label="Transaction amount in Philippine pesos" placeholder="0.00"></div>
+    </div>
+
+    <div class="field" id="txn-classification-field">
+      <label for="txn-classification-select">Classification</label>
+      <span class="field-hint">What kind of expense or income this is — a category like Food or Transport, used for your spending breakdown.</span>
+      <select id="txn-classification-select"></select>
+    </div>
+
+    <div class="field">
       <label for="txn-note">Note</label>
-      <input type="text" id="txn-note" placeholder="e.g. Groceries, Salary, Rent...">
+      <input type="text" id="txn-note" placeholder="e.g. McDo lunch, Grab ride to Ortigas, Watsons vitamins">
     </div>
 
     <div class="field">
       <label for="txn-date">Date</label>
       <input type="date" id="txn-date">
+    </div>
+
+    <div class="field">
+      <label for="txn-time">Time</label>
+      <input type="time" id="txn-time">
     </div>
 
     <button class="btn-primary" id="txn-save-btn" onclick="saveTxn()">Save transaction</button>
@@ -936,23 +949,24 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
       <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="recur-amount" aria-label="Recurring amount in Philippine pesos" placeholder="0.00"></div>
     </div>
 
-    <div class="field" id="recur-classification-field">
-      <label for="recur-classification-select">Classification</label>
-      <select id="recur-classification-select"></select>
-    </div>
-
     <div class="field" id="recur-group-field">
       <label for="recur-group-select">Group</label>
-      <select id="recur-group-select"><option value="">Unrestricted</option></select>
+      <select id="recur-group-select"><option value="">Main Balance</option></select>
     </div>
     <div class="field" id="recur-subgroup-field" style="display:none;">
       <label for="recur-subgroup-select">Subgroup</label>
       <select id="recur-subgroup-select"><option value="">None</option></select>
     </div>
 
+    <div class="field" id="recur-classification-field">
+      <label for="recur-classification-select">Classification</label>
+      <span class="field-hint">What kind of expense or income this is — a category like Food or Transport, used for your spending breakdown.</span>
+      <select id="recur-classification-select"></select>
+    </div>
+
     <div class="field">
       <label for="recur-note">Note</label>
-      <input type="text" id="recur-note" placeholder="e.g. Netflix, Rent, Salary...">
+      <input type="text" id="recur-note" placeholder="e.g. Netflix subscription, Meralco bill, ABC Corp payroll">
     </div>
 
     <div class="field">
@@ -975,6 +989,20 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
   </div>
 </div>
 
+<!-- ===== MODAL: Welcome / Set Name ===== -->
+<div class="overlay" id="modal-welcome">
+  <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-welcome')" aria-label="Close welcome form">✕</button>
+    <div class="sheet-handle"></div>
+    <h3>Welcome to PAMFlow</h3>
+    <div class="field">
+      <label for="welcome-name-input">What should we call you?</label>
+      <input type="text" id="welcome-name-input" placeholder="e.g. 0088">
+    </div>
+    <button class="btn-primary" onclick="saveWelcomeName()">Continue</button>
+  </div>
+</div>
+
 <!-- ===== MODAL: Add Group ===== -->
 <div class="overlay" id="modal-group">
   <div class="sheet">
@@ -988,7 +1016,6 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     <div class="field">
       <label id="group-amount-label" for="group-amount-input">Amount to allocate</label>
       <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="group-amount-input" aria-label="Amount to allocate in Philippine pesos" placeholder="0.00"></div>
-      <div style="font-size:11.5px; color:var(--ink-soft); margin-top:5px;" id="group-amount-hint"></div>
     </div>
     <button class="btn-primary" onclick="saveGroup()">Save</button>
   </div>
@@ -1049,6 +1076,10 @@ const EMOJIS = ['🏦','📱','💵','💳','👛','💰','🐱','🏧','💎','
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
+function nowTimeStr(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
 function defaultClassifications(){
   return [
     {id: uid(), name:'Salary', type:'income'},
@@ -1313,9 +1344,9 @@ function groupBalance(acc, groupId, subgroupId){
 }
 
 function groupSubLabel(acc, groupId, subgroupId){
-  if(!groupId) return 'Unrestricted';
+  if(!groupId) return 'Main Balance';
   const g = findGroup(acc, groupId);
-  if(!g) return 'Unrestricted';
+  if(!g) return 'Main Balance';
   const s = subgroupId ? (g.subgroups||[]).find(x=>x.id===subgroupId) : null;
   return g.name + (s ? ' / '+s.name : '');
 }
@@ -1470,23 +1501,33 @@ function txnRowHTML(t, showAccountContext){
     label = t.note || (t.type==='income'?'Income':'Expense');
     const g = acc && t.groupId ? findGroup(acc, t.groupId) : null;
     const sg = g && t.subgroupId ? (g.subgroups||[]).find(s=>s.id===t.subgroupId) : null;
-    tag = (showAccountContext && acc ? acc.name+' · ' : '') + (g ? g.name + (sg? ' / '+sg.name : '') : 'Unrestricted');
+    tag = (showAccountContext && acc ? acc.name+' · ' : '') + (g ? g.name + (sg? ' / '+sg.name : '') : 'Main Balance');
   }
 
   return `<div class="txn-row">
     <div class="txn-ic ${cls}">${icon}</div>
     <div class="txn-info">
       <div class="txn-note">${escapeHtml(label)}</div>
-      <div class="txn-tag">${escapeHtml(tag)} · ${formatDate(t.date)}</div>
+      <div class="txn-tag">${escapeHtml(tag)} · ${formatDate(t.date)}${t.time ? ' · '+formatTime(t.time) : ''}</div>
     </div>
     <div class="txn-amt ${amtClass} mono">${sign}${peso(t.amount)}</div>
-    <button class="txn-del" onclick="deleteTxn('${t.id}')" aria-label="Delete transaction: ${escapeHtml(label)}">✕</button>
+    <div class="txn-actions">
+      ${t.type!=='reallocate' ? `<button class="txn-edit" onclick="editTxn('${t.id}')" aria-label="Edit transaction: ${escapeHtml(label)}">✎</button>` : ''}
+      <button class="txn-del" onclick="deleteTxn('${t.id}')" aria-label="Delete transaction: ${escapeHtml(label)}">✕</button>
+    </div>
   </div>`;
 }
 function formatDate(d){
   if(!d) return '';
   const dt = new Date(d+'T00:00:00');
   return dt.toLocaleDateString('en-PH', {month:'short', day:'numeric'});
+}
+function formatTime(t){
+  if(!t) return '';
+  const [h,m] = t.split(':').map(Number);
+  if(Number.isNaN(h) || Number.isNaN(m)) return '';
+  const dt = new Date(); dt.setHours(h, m, 0, 0);
+  return dt.toLocaleTimeString('en-PH', {hour:'numeric', minute:'2-digit'});
 }
 function findGroup(acc, groupId){ return (acc.groups||[]).find(g=>g.id===groupId); }
 
@@ -1541,7 +1582,7 @@ function renderAccountDetail(){
   const uncatBal = groupBalance(acc, null) + (acc.opening||0);
   let groupsHtml = `<div class="group-card">
     <div class="group-row" onclick="toggleGroup('uncat')">
-      <div class="gname"><span class="dot" style="background:var(--mauve)"></span>Unrestricted</div>
+      <div class="gname"><span class="dot" style="background:var(--mauve)"></span>Main Balance</div>
       <div style="display:flex;align-items:center;">
         <div class="gbal mono">${peso(uncatBal)}</div>
         <span class="chev" style="transform:rotate(${uncatOpen?90:0}deg)">›</span>
@@ -1597,7 +1638,7 @@ function shade(hex){
 }
 
 function deleteGroup(accId, groupId){
-  if(!confirm('Delete this group? Its money will return to Unrestricted.')) return;
+  if(!confirm('Delete this group? Its money will return to Main Balance.')) return;
   const acc = getAccount(accId);
   acc.groups = (acc.groups||[]).filter(g=>g.id!==groupId);
   state.transactions.forEach(t=>{
@@ -1649,7 +1690,7 @@ function computeStats(period){
       if(statsCustomEnd && d > statsCustomEnd) return;
     }
     const cls = t.classificationId ? getClassification(t.classificationId) : null;
-    const cname = cls ? cls.name : 'Unclassified';
+    const cname = cls ? cls.name : 'General';
     if(t.type==='income'){ income += t.amount; incomeByClass[cname] = (incomeByClass[cname]||0)+t.amount; }
     else { expense += t.amount; expenseByClass[cname] = (expenseByClass[cname]||0)+t.amount; }
   });
@@ -1788,14 +1829,14 @@ function csvEscape(v){
   return s;
 }
 function exportCSV(){
-  const rows = [['Date','Type','Account','To Account','Classification','Group','Subgroup','Note','Amount']];
+  const rows = [['Date','Time','Type','Account','To Account','Classification','Group','Subgroup','Note','Amount']];
   const sorted = [...state.transactions].sort((a,b)=> (a.date||'').localeCompare(b.date||'') || a.createdAt-b.createdAt);
   sorted.forEach(t=>{
     if(t.type==='reallocate'){
       const acc = getAccount(t.accountId);
       const fromLabel = groupSubLabel(acc, t.fromGroupId, t.fromSubgroupId);
       const toLabel = groupSubLabel(acc, t.toGroupId, t.toSubgroupId);
-      rows.push([ t.date||'', t.type, acc ? acc.name : '', '', '', fromLabel+' → '+toLabel, '', t.note||'', t.amount ]);
+      rows.push([ t.date||'', t.time||'', t.type, acc ? acc.name : '', '', '', fromLabel+' → '+toLabel, '', t.note||'', t.amount ]);
       return;
     }
     const acc = getAccount(t.accountId || t.fromAccountId);
@@ -1804,9 +1845,9 @@ function exportCSV(){
     const g = acc && t.groupId ? findGroup(acc, t.groupId) : null;
     const sg = g && t.subgroupId ? (g.subgroups||[]).find(s=>s.id===t.subgroupId) : null;
     rows.push([
-      t.date||'', t.type, acc ? acc.name : '', toAcc ? toAcc.name : '',
-      t.type==='transfer' ? '' : (cls ? cls.name : 'Unclassified'),
-      t.type==='transfer' ? '' : (g ? g.name : 'Unrestricted'),
+      t.date||'', t.time||'', t.type, acc ? acc.name : '', toAcc ? toAcc.name : '',
+      t.type==='transfer' ? '' : (cls ? cls.name : 'General'),
+      t.type==='transfer' ? '' : (g ? g.name : 'Main Balance'),
       sg ? sg.name : '', t.note||'', t.amount
     ]);
   });
@@ -1935,25 +1976,68 @@ function deleteAccountConfirm(){
 /* ============ MODAL: TRANSACTION ============ */
 let txnModalState = { type:'expense', fromId:null, toId:null };
 
-function openTxnModal(accountId){
+function openTxnModal(accountId, presetType){
   if(state.accounts.length===0){ toast('Add an account first'); openAccountModal(); return; }
-  txnModalState = { type:'expense', fromId: accountId || currentAccountId || state.accounts[0].id, toId:null };
+  txnModalState = { type: presetType || 'expense', fromId: accountId || currentAccountId || state.accounts[0].id, toId:null, editId:null };
+  document.getElementById('txn-modal-title').textContent = 'Add transaction';
+  document.getElementById('txn-save-btn').textContent = 'Save transaction';
   document.getElementById('txn-amount').value = '';
   document.getElementById('txn-note').value = '';
   document.getElementById('txn-date').value = todayStr();
+  document.getElementById('txn-time').value = nowTimeStr();
   renderTxnTypeSeg();
   renderTxnAccGrids();
   renderTxnGroupSelects();
   renderTxnClassificationSelect();
   showOverlay('modal-txn');
 }
+// Opens the same Add Transaction modal, pre-filled from an existing
+// expense/income/transfer entry, so saveTxn() can update it in place instead
+// of creating a new one. Reallocate transactions use their own modal/flow and
+// aren't editable here (see the txnRowHTML guard that hides the edit button
+// for them).
+function editTxn(id){
+  const t = state.transactions.find(x=>x.id===id);
+  if(!t || t.type==='reallocate') return;
+
+  txnModalState = {
+    type: t.type,
+    fromId: t.type==='transfer' ? t.fromAccountId : t.accountId,
+    toId: t.type==='transfer' ? t.toAccountId : null,
+    editId: t.id,
+  };
+  document.getElementById('txn-modal-title').textContent = 'Edit transaction';
+  document.getElementById('txn-save-btn').textContent = 'Save changes';
+  document.getElementById('txn-amount').value = t.amount;
+  document.getElementById('txn-note').value = t.note || '';
+  document.getElementById('txn-date').value = t.date || todayStr();
+  document.getElementById('txn-time').value = t.time || '';
+
+  renderTxnTypeSeg();
+  renderTxnAccGrids();
+  renderTxnGroupSelects();
+  document.getElementById('txn-group-select').value = t.groupId || '';
+  renderTxnGroupGrid();
+  renderTxnSubgroupSelect();
+  if(t.subgroupId) document.getElementById('txn-subgroup-select').value = t.subgroupId;
+  renderTxnClassificationSelect();
+  if(t.classificationId) document.getElementById('txn-classification-select').value = t.classificationId;
+
+  showOverlay('modal-txn');
+}
 function openGroupTxnModal(accId, groupId, subgroupId){
   openTxnModal(accId);
   const gsel = document.getElementById('txn-group-select');
   gsel.value = groupId || '';
+  renderTxnGroupGrid();
   renderTxnSubgroupSelect();
   if(subgroupId){ document.getElementById('txn-subgroup-select').value = subgroupId; }
 }
+const TXN_NOTE_PLACEHOLDER = {
+  expense: 'e.g. McDo lunch, Grab ride to Ortigas, Watsons vitamins',
+  income: 'e.g. July 15 payroll from ABC Corp, Freelance logo design payout, Ninang\'s birthday gift',
+  transfer: 'e.g. Moved BDO to savings goal, Paid off credit card balance',
+};
 function renderTxnTypeSeg(){
   const seg = document.getElementById('txn-type-seg');
   [...seg.children].forEach(b=>{
@@ -1963,6 +2047,7 @@ function renderTxnTypeSeg(){
   document.getElementById('txn-to-field').style.display = txnModalState.type==='transfer' ? 'block' : 'none';
   document.getElementById('txn-from-label').textContent = txnModalState.type==='transfer' ? 'From account' : 'Account';
   document.getElementById('txn-group-field').style.display = txnModalState.type==='transfer' ? 'none' : 'block';
+  document.getElementById('txn-note').placeholder = TXN_NOTE_PLACEHOLDER[txnModalState.type] || '';
 }
 function renderTxnClassificationSelect(){
   const field = document.getElementById('txn-classification-field');
@@ -1970,7 +2055,7 @@ function renderTxnClassificationSelect(){
   if(txnModalState.type === 'transfer'){ field.style.display = 'none'; return; }
   field.style.display = 'block';
   const list = classificationsByType(txnModalState.type);
-  sel.innerHTML = '<option value="">Unclassified</option>'
+  sel.innerHTML = '<option value="">General</option>'
     + list.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
     + '<option value="__new__">+ Add new classification…</option>';
   sel.onchange = ()=>{
@@ -1983,9 +2068,9 @@ function renderTxnClassificationSelect(){
 }
 function renderTxnAccGrids(){
   const fromGrid = document.getElementById('txn-from-grid');
-  fromGrid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${txnModalState.fromId===a.id?'active':''}" onclick="pickTxnFrom('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><span>${escapeHtml(a.name)}</span></div>`).join('');
+  fromGrid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${txnModalState.fromId===a.id?'active':''}" onclick="pickTxnFrom('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
   const toGrid = document.getElementById('txn-to-grid');
-  toGrid.innerHTML = state.accounts.filter(a=>a.id!==txnModalState.fromId).map(a=>`<div class="acc-opt ${txnModalState.toId===a.id?'active':''}" onclick="pickTxnTo('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><span>${escapeHtml(a.name)}</span></div>`).join('');
+  toGrid.innerHTML = state.accounts.filter(a=>a.id!==txnModalState.fromId).map(a=>`<div class="acc-opt ${txnModalState.toId===a.id?'active':''}" onclick="pickTxnTo('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
 }
 function pickTxnFrom(id){ txnModalState.fromId=id; if(txnModalState.toId===id) txnModalState.toId=null; renderTxnAccGrids(); renderTxnGroupSelects(); }
 function pickTxnTo(id){ txnModalState.toId=id; renderTxnAccGrids(); }
@@ -1993,8 +2078,28 @@ function renderTxnGroupSelects(){
   const acc = getAccount(txnModalState.fromId);
   const gsel = document.getElementById('txn-group-select');
   const groups = acc ? (acc.groups||[]) : [];
-  gsel.innerHTML = '<option value="">Unrestricted</option>' + groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
-  gsel.onchange = renderTxnSubgroupSelect;
+  gsel.innerHTML = '<option value="">Main Balance</option>' + groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+  gsel.onchange = ()=>{ renderTxnGroupGrid(); renderTxnSubgroupSelect(); };
+  renderTxnGroupGrid();
+  renderTxnSubgroupSelect();
+}
+function renderTxnGroupGrid(){
+  const acc = getAccount(txnModalState.fromId);
+  const grid = document.getElementById('txn-group-grid');
+  const gsel = document.getElementById('txn-group-select');
+  const groups = acc ? (acc.groups||[]) : [];
+  const cur = gsel.value || '';
+  const unrestrictedBal = acc ? groupBalance(acc, null) + (acc.opening||0) : 0;
+  let html = `<div class="acc-opt ${cur===''?'active':''}" onclick="pickTxnGroup('')"><div class="info"><span class="name">Main Balance</span><span class="bal">${peso(unrestrictedBal)}</span></div></div>`;
+  html += groups.map(g=>{
+    const bal = acc ? groupBalance(acc, g.id) : 0;
+    return `<div class="acc-opt ${cur===g.id?'active':''}" onclick="pickTxnGroup('${g.id}')"><div class="info"><span class="name">${escapeHtml(g.name)}</span><span class="bal">${peso(bal)}</span></div></div>`;
+  }).join('');
+  grid.innerHTML = html;
+}
+function pickTxnGroup(id){
+  document.getElementById('txn-group-select').value = id;
+  renderTxnGroupGrid();
   renderTxnSubgroupSelect();
 }
 function renderTxnSubgroupSelect(){
@@ -2048,34 +2153,51 @@ const Validators = {
 
 function saveTxn(){
   const date = document.getElementById('txn-date').value || todayStr();
+  const time = document.getElementById('txn-time').value || '';
+  const note = document.getElementById('txn-note').value.trim();
   const check = Validators.transaction({
     amount: document.getElementById('txn-amount').value,
     accountId: txnModalState.fromId,
     toAccountId: txnModalState.toId,
     type: txnModalState.type,
     date,
+    note,
   });
   if(!check.valid){ toast(check.error); return; }
 
+  const isEdit = !!txnModalState.editId;
+
   runWithBusy('txn-save-btn', ()=>{
     snapshotBeforeChange();
+    const existing = isEdit ? state.transactions.find(t=>t.id===txnModalState.editId) : null;
+    if(isEdit && !existing){ hideOverlay('modal-txn'); toast('That transaction no longer exists'); return; }
+
     const base = {
-      id: uid(), amount: check.amount, note: document.getElementById('txn-note').value.trim(),
-      date, createdAt: Date.now()
+      id: isEdit ? existing.id : uid(),
+      amount: check.amount, note: document.getElementById('txn-note').value.trim(),
+      date, time, createdAt: isEdit ? existing.createdAt : Date.now()
     };
-    if(txnModalState.type==='transfer'){
-      state.transactions.push({...base, type:'transfer', fromAccountId:txnModalState.fromId, toAccountId:txnModalState.toId,
-        groupId: document.getElementById('txn-group-select').value || null,
-        subgroupId: document.getElementById('txn-subgroup-select').value || null});
+    const updated = txnModalState.type==='transfer'
+      ? {...base, type:'transfer', fromAccountId:txnModalState.fromId, toAccountId:txnModalState.toId,
+          groupId: document.getElementById('txn-group-select').value || null,
+          subgroupId: document.getElementById('txn-subgroup-select').value || null}
+      : {...base, type:txnModalState.type, accountId:txnModalState.fromId,
+          groupId: document.getElementById('txn-group-select').value || null,
+          subgroupId: document.getElementById('txn-subgroup-select').value || null,
+          classificationId: document.getElementById('txn-classification-select').value || null};
+
+    if(isEdit){
+      const idx = state.transactions.findIndex(t=>t.id===txnModalState.editId);
+      state.transactions[idx] = updated;
     } else {
-      state.transactions.push({...base, type:txnModalState.type, accountId:txnModalState.fromId,
-        groupId: document.getElementById('txn-group-select').value || null,
-        subgroupId: document.getElementById('txn-subgroup-select').value || null,
-        classificationId: document.getElementById('txn-classification-select').value || null});
+      state.transactions.push(updated);
     }
     const ok = saveState();
     hideOverlay('modal-txn'); render();
-    if(ok){ haptic('medium'); toast('Transaction added', { label:'Undo', onClick: undo }); }
+    if(ok){
+      haptic('medium');
+      toast(isEdit ? 'Transaction updated' : 'Transaction added', { label:'Undo', onClick: undo });
+    }
   });
 }
 
@@ -2199,7 +2321,7 @@ function renderRecurGroupSelects(){
   const acc = getAccount(recurModalState.fromId);
   const gsel = document.getElementById('recur-group-select');
   const groups = acc ? (acc.groups||[]) : [];
-  gsel.innerHTML = '<option value="">Unrestricted</option>' + groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+  gsel.innerHTML = '<option value="">Main Balance</option>' + groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
   gsel.onchange = renderRecurSubgroupSelect;
   renderRecurSubgroupSelect();
 }
@@ -2222,7 +2344,7 @@ function renderRecurClassificationSelect(){
   if(recurModalState.type === 'transfer'){ field.style.display = 'none'; return; }
   field.style.display = 'block';
   const list = classificationsByType(recurModalState.type);
-  sel.innerHTML = '<option value="">Unclassified</option>'
+  sel.innerHTML = '<option value="">General</option>'
     + list.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
     + '<option value="__new__">+ Add new classification…</option>';
   sel.onchange = ()=>{
@@ -2320,7 +2442,6 @@ function openGroupModal(accId){
   document.getElementById('group-name-label').textContent = 'Group name';
   document.getElementById('group-name-input').value = '';
   document.getElementById('group-amount-input').value = '';
-  document.getElementById('group-amount-hint').textContent = `Available in Unrestricted: ${peso(available)}`;
   showOverlay('modal-group');
 }
 function openSubgroupModal(accId, groupId){
@@ -2331,7 +2452,6 @@ function openSubgroupModal(accId, groupId){
   document.getElementById('group-name-label').textContent = 'Subgroup name';
   document.getElementById('group-name-input').value = '';
   document.getElementById('group-amount-input').value = '';
-  document.getElementById('group-amount-hint').textContent = `Available in this group: ${peso(available)}`;
   showOverlay('modal-group');
 }
 function saveGroup(){
@@ -2343,7 +2463,7 @@ function saveGroup(){
   const EPS = 0.005;
   if(groupModalState.mode==='group'){
     const available = groupBalance(acc, null) + (acc.opening||0);
-    if(amount > available + EPS){ toast(`Amount exceeds Unrestricted balance (${peso(available)})`); return; }
+    if(amount > available + EPS){ toast(`Amount exceeds Main Balance (${peso(available)})`); return; }
     acc.groups = acc.groups || [];
     const newGroup = { id: uid(), name, subgroups: [] };
     acc.groups.push(newGroup);
@@ -2382,7 +2502,7 @@ function encodeGS(g,s){ return (g==null?'':g) + '|' + (s==null?'':s); }
 function decodeGS(v){ const parts = (v||'').split('|'); return { g: parts[0]===''?null:parts[0], s: parts[1]===''?null:parts[1] }; }
 
 function reallocOptionsHTML(acc, selectedValue){
-  let html = `<option value="${encodeGS(null,null)}">Unrestricted</option>`;
+  let html = `<option value="${encodeGS(null,null)}">Main Balance</option>`;
   (acc.groups||[]).forEach(g=>{
     html += `<option value="${encodeGS(g.id,null)}">${escapeHtml(g.name)}</option>`;
     (g.subgroups||[]).forEach(s=>{
@@ -2509,6 +2629,19 @@ function saveUserName(val){
     userNameSavedTimer = setTimeout(()=> ind.classList.remove('show'), 1100);
   }
 }
+function maybeShowWelcomeName(){
+  if((state.settings.userName || '').trim()) return;
+  document.getElementById('welcome-name-input').value = '';
+  showOverlay('modal-welcome');
+}
+function saveWelcomeName(){
+  const name = document.getElementById('welcome-name-input').value.trim();
+  if(!name){ toast('Enter a name'); return; }
+  saveUserName(name);
+  const input = document.getElementById('settings-username');
+  if(input) input.value = name;
+  hideOverlay('modal-welcome');
+}
 
 function toggleHideAmounts(){
   state.settings.hideAmounts = !state.settings.hideAmounts;
@@ -2629,7 +2762,17 @@ function closeVelocity(){
 }
 
 /* ============ OVERLAY HELPERS ============ */
-function showOverlay(id){ document.getElementById(id).classList.add('show'); }
+function showOverlay(id){
+  const overlay = document.getElementById(id);
+  overlay.classList.add('show');
+  // The .sheet inside stays in the DOM (only this class toggles), so its
+  // scroll position from last time otherwise carries over — e.g. close the
+  // form mid-scroll without saving, reopen it, and it's still scrolled down
+  // with the top fields (type, account, amount) off-screen. Always start
+  // fresh at the top.
+  const sheet = overlay.querySelector('.sheet');
+  if(sheet) sheet.scrollTop = 0;
+}
 function hideOverlay(id){ document.getElementById(id).classList.remove('show'); }
 document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('show'); });
@@ -2724,10 +2867,27 @@ function runWithBusy(buttonId, work, minDelay = 220){
   }, { passive:true });
 })();
 
+/* ============ HOME SCREEN SHORTCUTS ============ */
+// manifest.json declares three shortcuts (Add Expense / Add Income /
+// Transfer), each launching "./index.html?action=...". Long-press the app
+// icon (Android) or right-click the taskbar icon (desktop PWA installs) to
+// reach them. We read the query param once on load, open the matching modal,
+// then strip it from the URL so a later refresh doesn't reopen it.
+function handleAppShortcut(){
+  const action = new URLSearchParams(location.search).get('action');
+  if(!action) return;
+  history.replaceState(null, '', location.pathname);
+  const typeByAction = { 'add-expense':'expense', 'add-income':'income', 'transfer':'transfer' };
+  const type = typeByAction[action];
+  if(type) openTxnModal(null, type);
+}
+
 /* ============ INIT ============ */
 applyHideAmountsUI();
 processRecurring();
 go('home');
+maybeShowWelcomeName();
+handleAppShortcut();
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState==='visible' && processRecurring()) render();
 });

@@ -1710,8 +1710,19 @@ function importBackup(e){
       const imported = JSON.parse(ev.target.result);
       if(!imported || !Array.isArray(imported.accounts) || !Array.isArray(imported.transactions)) throw new Error('bad shape');
       if(!confirm('Import this backup? This will replace all current data on this device.')){ e.target.value=''; return; }
-      imported.settings = imported.settings || { includedAccounts: imported.accounts.map(a=>a.id), excludedGroups: [], excludedSubgroups: [] };
-      state = imported;
+      // Route through migrate() instead of assigning `imported` directly — backups
+      // from older app versions (or hand-edited files) may be missing settings
+      // fields like hideAmounts/theme/excludedSubgroups, which would otherwise
+      // stay undefined and cause errors later. migrate() backfills all of them
+      // from SETTINGS_SCHEMA, same as a normal page load does.
+      const hadIncludedAccounts = !!(imported.settings && Array.isArray(imported.settings.includedAccounts));
+      state = migrate(imported);
+      // migrate()'s generic default for a missing includedAccounts is an empty
+      // array. For a fresh import that means every account would vanish from
+      // the home total until the user manually re-enables them in Settings —
+      // so if the backup never had this field at all, default it to "all
+      // accounts included" instead, matching what a first-time import expects.
+      if(!hadIncludedAccounts) state.settings.includedAccounts = state.accounts.map(a=>a.id);
       saveState(); toast('Backup imported'); go('home');
     }catch(err){ toast('That file doesn\'t look like a PAMFlow backup'); }
     e.target.value = '';

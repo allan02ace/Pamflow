@@ -212,7 +212,9 @@
     line-height:1;
     letter-spacing:-0.01em;
     font-variant-numeric:tabular-nums;
+    transition: opacity .25s ease;
   }
+  .readout-num.stale{ opacity:.4; }
   .readout-unit{
     font-family:'Space Mono',monospace;
     font-size:11px;
@@ -1318,6 +1320,7 @@ window.storage = (function () {
   function updateReadout(ms){
     const v = msToUnit(ms);
     els.readoutNum.textContent = Math.round(v);
+    els.readoutNum.classList.remove('stale');
     setNeedle(v);
   }
 
@@ -1473,6 +1476,7 @@ window.storage = (function () {
     // still measures distance from the last trustworthy point.
     if(acc !== null && acc > MAX_ACCURACY_M){
       setGpsStatus('weak', `GPS weak · ±${acc}m`);
+      els.readoutNum.classList.add('stale');
       updateDebugPanel({ rawSpeed: null, calcSpeed: null, source: `skipped (±${acc}m too weak)`, accuracy: acc, dt: null, dist: null });
       return;
     }
@@ -1504,8 +1508,11 @@ window.storage = (function () {
       }
     }
 
-    let instSpeed = rawSpeed !== null ? rawSpeed : calcSpeed;
-    let source = rawSpeed !== null ? 'device (coords.speed)' : (calcSpeed !== null ? 'calculated (distance÷time)' : 'no data yet');
+    let instSpeed = 0;
+    let source='';
+    if(rawSpeed!==null && acc!==null && acc<=15 && isPlausibleSpeed(rawSpeed,dt,currentSpeedMs)){instSpeed=rawSpeed;source='GPS Device';}
+    else if(calcSpeed!==null && isPlausibleSpeed(calcSpeed,dt,currentSpeedMs)){instSpeed=calcSpeed;source='GPS Calculated';}
+    else {instSpeed=currentSpeedMs*0.9;source='Filtered';}
 
     // Reject an implausible instantaneous reading (GPS multipath spike, bad
     // fix near tunnels/tall buildings, etc.) instead of letting one bad
@@ -1514,6 +1521,7 @@ window.storage = (function () {
     if(instSpeed !== null && !isPlausibleSpeed(instSpeed, dt, currentSpeedMs)){
       source += ' · rejected (implausible jump)';
       instSpeed = null;
+      els.readoutNum.classList.add('stale');
     }
 
     lastPos = { lat: latitude, lon: longitude, t: now };
@@ -1521,7 +1529,8 @@ window.storage = (function () {
     updateDebugPanel({ rawSpeed, calcSpeed, source, accuracy: acc, dt, dist: d });
 
     if(instSpeed !== null){
-      currentSpeedMs = instSpeed;
+      const alpha=0.25;
+    currentSpeedMs=currentSpeedMs+alpha*(instSpeed-currentSpeedMs);
       updateReadout(instSpeed);
       const isPaused = checkAutoPause(instSpeed, now);
       if(!isPaused){

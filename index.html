@@ -29,6 +29,7 @@
 :root{
   --main:#5e1086;
   --main-dark:#3a0a54;
+  --accent: var(--main); /* text/border accent — same as --main in light mode, lightened in dark mode for contrast */
   --mauve:#7f5f8d;
   --pink-bg:#ffe8ff;
   --teal:#5fbaaf;
@@ -39,10 +40,46 @@
   --white:#ffffff;
   --card:#fffaff;
   --ink:#3a0a54;
-  --ink-soft:#7f5f8d;
+  --ink-soft:#6b4d78;
   --line: rgba(94,16,134,0.12);
-  --shadow: 0 8px 24px rgba(94,16,134,0.14);
+
+  /* Semantic aliases over the palette above — use these where the *meaning*
+     (success/danger/warning/info) matters more than the specific brand hue,
+     e.g. status badges, validation text. Values match what income/expense/
+     transfer/reallocate already used throughout the app. */
+  --color-success: var(--teal-dark);
+  --color-success-bg: #dff3f0;
+  --color-danger: var(--coral);
+  --color-danger-bg: var(--coral-soft);
+  --color-warning: var(--gold);
+  --color-warning-bg: #fdf1da;
+  --color-info: var(--main);
+  --color-info-bg: #efe3f7;
+  --color-neutral: var(--ink-soft);
+
+  /* Shadow scale. Every shadow in this file is the brand purple (94,16,134)
+     at increasing spread/opacity — named here instead of repeated as magic
+     rgba() values at each call site. Values are unchanged from before, just
+     extracted, so nothing should look different. */
+  --shadow-xs: 0 1px 3px rgba(0,0,0,.1);
   --shadow-sm: 0 3px 10px rgba(94,16,134,0.10);
+  --shadow: 0 8px 24px rgba(94,16,134,0.14);
+  --shadow-md: var(--shadow);
+  --shadow-nav: 0 10px 30px rgba(94,16,134,0.25);
+  --shadow-btn: 0 8px 18px rgba(94,16,134,0.3);
+  --shadow-fab: 0 8px 18px rgba(94,16,134,0.4);
+  --shadow-lg: 0 14px 30px rgba(94,16,134,0.32);
+
+  /* Spacing scale — available for new/refactored rules. Existing rules keep
+     their hand-tuned px values (a mechanical find/replace across ~150
+     one-off paddings would risk visual regressions for little benefit). */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+
   --radius: 22px;
   --radius-sm: 14px;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -86,7 +123,7 @@ button{font-family:inherit; cursor:pointer;}
   width:40px; height:40px; border-radius:50%;
   border:none; background:var(--white); box-shadow: var(--shadow-sm);
   display:flex; align-items:center; justify-content:center; font-size:18px;
-  color: var(--main);
+  color: var(--accent);
   transition: transform .15s ease;
 }
 .icon-btn:active{transform: scale(0.9);}
@@ -104,7 +141,7 @@ button{font-family:inherit; cursor:pointer;}
   padding: 26px 22px 22px;
   color:#fff;
   overflow:hidden;
-  box-shadow: 0 14px 30px rgba(94,16,134,0.32);
+  box-shadow: var(--shadow-lg);
   margin-bottom: 18px;
 }
 .jar-card .coin{
@@ -132,7 +169,7 @@ button{font-family:inherit; cursor:pointer;}
 
 .save-indicator{
   position:absolute; right:2px; top:-1px;
-  font-size:11px; font-weight:800; color:var(--teal-dark);
+  font-size:11px; font-weight:800; color:var(--color-success);
   opacity:0; transform:translateY(-2px);
   transition: opacity .25s ease, transform .25s ease;
   display:flex; align-items:center; gap:3px;
@@ -143,7 +180,7 @@ button{font-family:inherit; cursor:pointer;}
 .section-head h2{font-size:16px; color:var(--main-dark);}
 .section-head .count{color:var(--ink-soft); font-size:13px; font-weight:600;}
 .add-link{
-  border:none; background:none; color:var(--main); font-weight:800; font-size:13px;
+  border:none; background:none; color:var(--accent); font-weight:800; font-size:13px;
   display:flex; align-items:center; gap:4px;
 }
 
@@ -168,7 +205,7 @@ button{font-family:inherit; cursor:pointer;}
 .acc-name{font-weight:800; font-size:14.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .acc-type{font-size:11.5px; color:var(--ink-soft); font-weight:600;}
 .acc-bal{font-weight:700; font-size:14.5px; text-align:right; white-space:nowrap;}
-.acc-bal.neg{color:var(--coral);}
+.acc-bal.neg{color:var(--color-danger);}
 
 .empty{
   text-align:center; padding: 34px 18px; color:var(--ink-soft);
@@ -183,7 +220,7 @@ button{font-family:inherit; cursor:pointer;}
   bottom: calc(14px + var(--safe-bottom));
   width: calc(100% - 36px); max-width: 444px;
   background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
-  border-radius: 24px; box-shadow: 0 10px 30px rgba(94,16,134,0.25);
+  border-radius: 24px; box-shadow: var(--shadow-nav);
   display:flex; align-items:center; justify-content:space-around;
   padding: 8px 8px; z-index: 50; border:1px solid rgba(255,255,255,0.6);
 }
@@ -192,12 +229,12 @@ button{font-family:inherit; cursor:pointer;}
   color: var(--ink-soft); font-size:10.5px; font-weight:700; padding:6px 12px; border-radius:14px;
 }
 .navbtn .ic{font-size:19px;}
-.navbtn.active{color:var(--main);}
+.navbtn.active{color:var(--accent);}
 .navbtn.active .ic{transform: translateY(-1px);}
 .fab{
   width:54px; height:54px; border-radius:50%; border:none;
   background: linear-gradient(135deg, var(--teal), var(--main));
-  color:#fff; font-size:26px; box-shadow: 0 8px 18px rgba(94,16,134,0.4);
+  color:#fff; font-size:26px; box-shadow: var(--shadow-fab);
   display:flex; align-items:center; justify-content:center; margin-top:-30px;
   transition: transform .15s ease;
 }
@@ -207,7 +244,7 @@ button{font-family:inherit; cursor:pointer;}
 .acc-header{
   display:flex; align-items:center; gap:12px; margin-bottom: 6px;
 }
-.back-btn{border:none; background:var(--white); box-shadow:var(--shadow-sm); width:38px; height:38px; border-radius:50%; font-size:18px; color:var(--main);}
+.back-btn{border:none; background:var(--white); box-shadow:var(--shadow-sm); width:38px; height:38px; border-radius:50%; font-size:18px; color:var(--accent);}
 .acc-hero{
   border-radius: 24px; padding: 20px; color:#fff; margin: 14px 0 18px;
   box-shadow: var(--shadow);
@@ -243,7 +280,7 @@ button{font-family:inherit; cursor:pointer;}
 .sub-row .sbal{font-weight:700; color:var(--ink);}
 .sub-row .sright{display:flex; align-items:center; gap:8px;}
 .sub-add-btn{border:none; background:var(--main); color:#fff; width:20px; height:20px; border-radius:50%; font-size:13px; font-weight:800; line-height:1; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-.mini-add{border:none; background:none; color:var(--main); font-weight:800; font-size:12.5px; margin-top:8px; padding:4px 0;}
+.mini-add{border:none; background:none; color:var(--accent); font-weight:800; font-size:12.5px; margin-top:8px; padding:4px 0;}
 .mini-add-row{display:flex; gap:14px; flex-wrap:wrap; margin-top:4px;}
 
 .txn-list{display:flex; flex-direction:column; gap:8px;}
@@ -254,16 +291,16 @@ button{font-family:inherit; cursor:pointer;}
 .txn-ic{
   width:36px;height:36px;border-radius:11px; display:flex;align-items:center;justify-content:center; font-size:16px; flex-shrink:0;
 }
-.txn-ic.income{background:#dff3f0; color:var(--teal-dark);}
-.txn-ic.expense{background:var(--coral-soft); color:var(--coral);}
-.txn-ic.transfer{background:#efe3f7; color:var(--main);}
-.txn-ic.reallocate{background:#fdf1da; color:var(--gold);}
+.txn-ic.income{background:var(--color-success-bg); color:var(--color-success);}
+.txn-ic.expense{background:var(--color-danger-bg); color:var(--color-danger);}
+.txn-ic.transfer{background:var(--color-info-bg); color:var(--color-info);}
+.txn-ic.reallocate{background:var(--color-warning-bg); color:var(--color-warning);}
 .txn-info{flex:1; min-width:0;}
 .txn-note{font-weight:800; font-size:13.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .txn-tag{font-size:11px; color:var(--ink-soft); font-weight:600;}
 .txn-amt{font-weight:800; font-size:14px; white-space:nowrap;}
-.txn-amt.pos{color:var(--teal-dark);}
-.txn-amt.neg{color:var(--coral);}
+.txn-amt.pos{color:var(--color-success);}
+.txn-amt.neg{color:var(--color-danger);}
 .txn-del{border:none;background:none;color:var(--ink-soft); font-size:15px; padding:4px;}
 
 .filterbar{display:flex; gap:8px; overflow-x:auto; padding: 2px 0 14px; scrollbar-width:none;}
@@ -308,12 +345,12 @@ button{font-family:inherit; cursor:pointer;}
   font-family:'Nunito'; font-size:15px; font-weight:600; color:var(--ink); outline:none;
   transition: border-color .15s ease;
 }
-.field input:focus, .field select:focus, .field textarea:focus{border-color: var(--main);}
+.field input:focus, .field select:focus, .field textarea:focus{border-color: var(--accent);}
 .amount-input{position:relative; display:flex; align-items:center;}
 .amount-input .peso{
   position:absolute; left:12px; top:50%; transform:translateY(-50%);
   width:22px; height:22px; display:flex; align-items:center; justify-content:center; overflow:hidden;
-  font-weight:800; color:var(--main); font-size:15px; line-height:1; pointer-events:none; z-index:1;
+  font-weight:800; color:var(--accent); font-size:15px; line-height:1; pointer-events:none; z-index:1;
 }
 .amount-input input[type=number]{width:100%; padding-left:44px; font-family:'DM Mono'; font-size:18px; font-weight:700; letter-spacing:.2px;}
 .amount-input input[type=number]::-webkit-outer-spin-button,
@@ -329,15 +366,15 @@ button{font-family:inherit; cursor:pointer;}
   display:flex; flex-direction:column; align-items:center; gap:5px; background:#fff; border:2px solid transparent;
   border-radius:14px; padding:9px 4px; text-align:center;
 }
-.preset-item.active{border-color: var(--main);}
+.preset-item.active{border-color: var(--accent);}
 .preset-item .av{width:34px;height:34px;border-radius:11px; display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff; position:relative; overflow:hidden;}
 .preset-item span{font-size:10px; font-weight:700; color:var(--ink); line-height:1.15;}
 
 .emoji-row, .color-row{display:flex; gap:8px; flex-wrap:wrap;}
 .emoji-opt{width:38px;height:38px; border-radius:11px; background:#fff; border:2px solid var(--line); font-size:17px; display:flex;align-items:center;justify-content:center;}
-.emoji-opt.active{border-color:var(--main); background:var(--pink-bg);}
+.emoji-opt.active{border-color:var(--accent); background:var(--pink-bg);}
 .color-opt{width:30px;height:30px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 0 2px var(--line);}
-.color-opt.active{box-shadow:0 0 0 2px var(--main);}
+.color-opt.active{box-shadow:0 0 0 2px var(--accent);}
 
 .logo-row{display:flex; gap:8px; flex-wrap:wrap;}
 .logo-opt{
@@ -345,7 +382,7 @@ button{font-family:inherit; cursor:pointer;}
   width:56px; background:#fff; border:2px solid var(--line); border-radius:13px;
   padding:7px 4px; text-align:center;
 }
-.logo-opt.active{border-color:var(--main); background:var(--pink-bg);}
+.logo-opt.active{border-color:var(--accent); background:var(--pink-bg);}
 .logo-opt img{width:28px; height:28px; border-radius:8px; object-fit:cover;}
 .logo-opt-fallback{width:28px; height:28px; border-radius:8px; background:var(--pink-bg); display:flex; align-items:center; justify-content:center; font-size:14px;}
 .logo-opt small{font-size:9px; font-weight:700; color:var(--ink); line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:52px;}
@@ -353,18 +390,27 @@ button{font-family:inherit; cursor:pointer;}
 .btn-primary{
   width:100%; border:none; background: linear-gradient(135deg, var(--main), #8a1fb8);
   color:#fff; font-weight:800; font-size:15.5px; padding:14px; border-radius:16px; margin-top:6px;
-  box-shadow: 0 8px 18px rgba(94,16,134,0.3);
+  box-shadow: var(--shadow-btn);
 }
 .btn-primary:active{transform: scale(0.98);}
+.btn-primary[aria-busy="true"], .btn-secondary[aria-busy="true"], .btn-danger[aria-busy="true"]{
+  opacity:0.7; pointer-events:none;
+}
+.btn-primary[aria-busy="true"]::after, .btn-secondary[aria-busy="true"]::after, .btn-danger[aria-busy="true"]::after{
+  content:''; display:inline-block; width:14px; height:14px; margin-left:8px; vertical-align:-2px;
+  border:2px solid currentColor; border-top-color:transparent; border-radius:50%;
+  animation: btn-spin .6s linear infinite;
+}
+@keyframes btn-spin{ to{ transform: rotate(360deg); } }
 .btn-secondary{
-  width:100%; border:2px solid var(--line); background:#fff; color:var(--main); font-weight:800; font-size:14px;
+  width:100%; border:2px solid var(--line); background:#fff; color:var(--accent); font-weight:800; font-size:14px;
   padding:12px; border-radius:16px; margin-top:8px;
 }
-.btn-danger{width:100%; border:none; background:var(--coral-soft); color:var(--coral); font-weight:800; font-size:14px; padding:12px; border-radius:16px; margin-top:8px;}
+.btn-danger{width:100%; border:none; background:var(--color-danger-bg); color:var(--color-danger); font-weight:800; font-size:14px; padding:12px; border-radius:16px; margin-top:8px;}
 
 .acc-select-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; max-height:200px; overflow-y:auto;}
 .acc-opt{display:flex; align-items:center; gap:8px; background:#fff; border:2px solid var(--line); border-radius:14px; padding:9px 10px;}
-.acc-opt.active{border-color:var(--main); background:var(--pink-bg);}
+.acc-opt.active{border-color:var(--accent); background:var(--pink-bg);}
 .acc-opt .av{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff; flex-shrink:0; position:relative; overflow:hidden;}
 .acc-opt .av .icon-fallback{width:100%; height:100%; align-items:center; justify-content:center;}
 .acc-opt span{font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -389,14 +435,62 @@ button{font-family:inherit; cursor:pointer;}
   position:fixed; bottom: calc(96px + var(--safe-bottom)); left:50%; transform:translateX(-50%) translateY(20px);
   background: var(--main-dark); color:#fff; padding:11px 20px; border-radius:30px; font-weight:700; font-size:13px;
   box-shadow: 0 8px 20px rgba(0,0,0,.3); opacity:0; pointer-events:none; transition:.25s ease; z-index:200;
+  display:flex; align-items:center; gap:10px; max-width: calc(100vw - 40px);
 }
-.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+.toast-action{
+  background:rgba(255,255,255,.2); border:none; color:#fff; font-weight:800; font-size:12px;
+  padding:5px 11px; border-radius:20px; cursor:pointer; white-space:nowrap; flex-shrink:0;
+}
+.toast-action:active{ background:rgba(255,255,255,.35); }
+.toast.toast-error{ background:#a02020; }
+
+/* ===== Keyboard focus states ===== */
+button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:focus-visible,
+.color-opt:focus-visible, .logo-opt:focus-visible, .navbtn:focus-visible{
+  outline: 2px solid var(--main); outline-offset: 2px; border-radius: 8px;
+}
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible{
+  outline: 2px solid var(--main); outline-offset: 1px;
+}
+.switch input:focus-visible + .track{ outline: 2px solid var(--main); outline-offset: 2px; }
+
+/* ===== Touch target sizing (min 44×44 tap area) =====
+   Several controls are deliberately small on screen (close buttons, delete
+   icons, toggles) for visual balance. Rather than resizing them and
+   disturbing the layout, we expand the invisible *hit area* with a centered
+   pseudo-element so nothing looks different but everything is easy to tap. */
+.icon-btn, .back-btn, .sub-add-btn, .txn-del, .mini-add, .chip, .navbtn, .switch, .seg button{
+  position:relative;
+}
+.icon-btn::after, .back-btn::after, .sheet-close::after, .gear::after,
+.sub-add-btn::after, .txn-del::after, .mini-add::after, .chip::after,
+.navbtn::after, .switch::after, .seg button::after{
+  content:''; position:absolute; top:50%; left:50%;
+  width:max(100%, 44px); height:max(100%, 44px);
+  transform:translate(-50%,-50%);
+}
 
 .data-banner{
   background:#fff5cf; border:1px solid #e8d38c; color:#7a5a00; font-size:11.5px; font-weight:700;
   border-radius:12px; padding:9px 12px; margin-bottom:14px; line-height:1.4; display:flex; gap:8px; align-items:flex-start;
 }
 .data-banner span.i{font-size:15px;}
+
+/* ===== Utility classes ===== */
+/* Small, composable helpers for one-off cases that don't warrant a new
+   component class — reach for these before hardcoding a color or shadow. */
+.text-success{ color: var(--color-success); }
+.text-danger{ color: var(--color-danger); }
+.text-warning{ color: var(--color-warning); }
+.text-neutral{ color: var(--color-neutral); }
+.bg-success-light{ background: var(--color-success-bg); }
+.bg-danger-light{ background: var(--color-danger-bg); }
+.bg-warning-light{ background: var(--color-warning-bg); }
+.shadow-xs{ box-shadow: var(--shadow-xs); }
+.shadow-sm{ box-shadow: var(--shadow-sm); }
+.shadow-md{ box-shadow: var(--shadow-md); }
+.shadow-lg{ box-shadow: var(--shadow-lg); }
 
 /* ===== Data / export buttons ===== */
 .btn-row{display:flex; gap:8px;}
@@ -412,17 +506,95 @@ button{font-family:inherit; cursor:pointer;}
 }
 .stat-card .lbl{font-size:11px; font-weight:800; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.3px;}
 .stat-card .val{font-family:'Baloo 2'; font-size:18px; font-weight:800; margin-top:4px; color:var(--main-dark);}
-.stat-card.income .val{color:var(--teal-dark);}
-.stat-card.expense .val{color:var(--coral);}
+.stat-card.income .val{color:var(--color-success);}
+.stat-card.expense .val{color:var(--color-danger);}
 .stat-bar-row{margin-bottom:12px;}
 .stat-bar-top{display:flex; justify-content:space-between; font-size:12.5px; font-weight:700; color:var(--ink); margin-bottom:5px;}
 .stat-bar-track{background:#f0e0f2; border-radius:8px; height:9px; overflow:hidden;}
 .stat-bar-fill{height:100%; border-radius:8px; transition: width .3s ease;}
-.neg-text{color:var(--coral);}
+
+.trend-chart{background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); box-shadow:var(--shadow-sm); padding:14px 10px 6px; margin-bottom:14px;}
+.trend-chart .legend{display:flex; gap:14px; justify-content:center; margin-bottom:10px; font-size:11px; font-weight:700; color:var(--ink-soft);}
+.trend-chart .legend span{display:inline-flex; align-items:center; gap:5px;}
+.trend-chart .legend .dot{width:8px; height:8px; border-radius:50%; display:inline-block; flex-shrink:0;}
+.trend-bars{display:flex; align-items:flex-end; gap:6px; height:120px; border-bottom:1px solid var(--line); padding-bottom:2px;}
+.trend-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+.trend-bargroup{display:flex; align-items:flex-end; gap:3px; height:100%;}
+.trend-bar{width:9px; border-radius:4px 4px 0 0; min-height:2px; transition: height .3s ease;}
+.trend-bar.income{background:var(--teal-dark);}
+.trend-bar.expense{background:var(--coral);}
+.trend-lbl{font-size:10px; font-weight:700; color:var(--ink-soft); margin-top:6px;}
+.neg-text{color:var(--color-danger);}
 
 @media (min-width:520px){
   body{background: linear-gradient(150deg,#f6dcf7, var(--pink-bg));}
 }
+
+/* ===== Additional responsive breakpoints ===== */
+@media (min-width:480px){
+  #app{ max-width:600px; }
+  .stat-cards{ gap:12px; }
+}
+
+@media (min-width:768px){
+  #app{ max-width:900px; }
+  .bottomnav{ width: calc(100% - 60px); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+}
+
+/* ===== Dark mode =====
+   Driven by html[data-theme="dark"|"light"], set by JS (see applyTheme()).
+   JS resolves "system" preference to an actual light/dark value on load and
+   whenever the OS setting changes, so this only needs one code path. */
+:root[data-theme="dark"]{
+  --pink-bg:#1b1220;
+  --card:#241a30;
+  --white:#2a1f38;
+  --ink:#f2e9f7;
+  --ink-soft:#b9a3c4;
+  --line: rgba(255,255,255,0.10);
+  --accent: #caa0f0;
+  --color-success-bg: rgba(95,186,175,0.16);
+  --color-danger-bg: rgba(209,71,122,0.18);
+  --color-warning-bg: rgba(232,178,61,0.16);
+  --color-info-bg: rgba(94,16,134,0.22);
+  --shadow-xs: 0 1px 3px rgba(0,0,0,.4);
+  --shadow-sm: 0 3px 10px rgba(0,0,0,.35);
+  --shadow: 0 8px 24px rgba(0,0,0,.4);
+  --shadow-md: var(--shadow);
+  --shadow-nav: 0 10px 30px rgba(0,0,0,.5);
+  --shadow-lg: 0 14px 30px rgba(0,0,0,.5);
+}
+[data-theme="dark"] body{
+  background: radial-gradient(1200px 800px at 15% -10%, #241a30 0%, #150d1c 45%, #0a0a0a 100%);
+  color: var(--ink);
+}
+[data-theme="dark"] .topbar{
+  background: linear-gradient(180deg, rgba(27,18,32,0.97) 60%, rgba(27,18,32,0));
+}
+[data-theme="dark"] .bottomnav{
+  background: rgba(36,26,48,0.85);
+  border-color: rgba(255,255,255,0.08);
+}
+/* surfaces that were hardcoded to #fff instead of a token */
+[data-theme="dark"] .sheet-close, [data-theme="dark"] .field input[type=text],
+[data-theme="dark"] .field input[type=number], [data-theme="dark"] .field input[type=date],
+[data-theme="dark"] .field select, [data-theme="dark"] .field textarea,
+[data-theme="dark"] .seg, [data-theme="dark"] .preset-item, [data-theme="dark"] .emoji-opt,
+[data-theme="dark"] .acc-opt, [data-theme="dark"] .logo-opt, [data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .switch .track:before{
+  background: var(--white);
+}
+[data-theme="dark"] .switch .track{ background: #3a2c46; }
+[data-theme="dark"] .stat-bar-track{ background: #3a2c46; }
+[data-theme="dark"] .data-banner{ background: rgba(232,178,61,0.14); border-color: rgba(232,178,61,0.35); color: #f0cd80; }
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3, [data-theme="dark"] h4, [data-theme="dark"] .display,
+[data-theme="dark"] .greet-time, [data-theme="dark"] .empty b, [data-theme="dark"] .sub-row .sname,
+[data-theme="dark"] .stat-card .val{ color: var(--ink); }
+[data-theme="dark"] .field label{ color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -430,7 +602,7 @@ button{font-family:inherit; cursor:pointer;}
 
   <div class="topbar">
     <div class="brand"><span class="mark">🐱</span><h1>PAMFlow</h1></div>
-    <button class="icon-btn" onclick="go('settings')">⚙️</button>
+    <button class="icon-btn" onclick="go('settings')" aria-label="Settings"><span aria-hidden="true">⚙️</span></button>
   </div>
 
   <!-- HOME -->
@@ -441,8 +613,8 @@ button{font-family:inherit; cursor:pointer;}
     </div>
     <div class="jar-card">
       <span class="coin c1">🪙</span><span class="coin c2">✨</span><span class="coin c3">🪙</span>
-      <button class="gear" id="hide-amounts-btn" style="right:58px;" onclick="toggleHideAmounts()" title="Hide amounts">👁️</button>
-      <button class="gear" onclick="go('settings')">⚙️</button>
+      <button class="gear" id="hide-amounts-btn" style="right:58px;" onclick="toggleHideAmounts()" title="Hide amounts" aria-label="Hide amounts">👁️</button>
+      <button class="gear" onclick="go('settings')" aria-label="Settings">⚙️</button>
       <div class="eyebrow">Total money</div>
       <div class="total mono" id="home-total">₱0.00</div>
       <div class="sub" id="home-sub">Your total balance</div>
@@ -453,9 +625,23 @@ button{font-family:inherit; cursor:pointer;}
 
   <!-- TRANSACTIONS -->
   <div class="view hidden" id="view-txns">
-    <div class="section-head" style="margin-top:16px;"><h2>All transactions</h2></div>
+    <div class="section-head" style="margin-top:16px;">
+      <h2>All transactions</h2>
+      <button class="icon-btn" style="width:34px;height:34px;font-size:15px;" onclick="go('recurring')" aria-label="Recurring transactions">🔁</button>
+    </div>
     <div class="filterbar" id="txn-filter"></div>
     <div class="txn-list" id="txn-all-list"></div>
+  </div>
+
+  <!-- RECURRING -->
+  <div class="view hidden" id="view-recurring">
+    <div class="acc-header">
+      <button class="back-btn" onclick="go('txns')" aria-label="Back">←</button>
+      <h2 style="font-size:16px; flex:1;">Recurring</h2>
+      <button class="icon-btn" onclick="openRecurringModal()" aria-label="Add recurring transaction">+</button>
+    </div>
+    <div class="data-banner" style="margin-bottom:14px;"><span class="i">🔁</span><span>PAMFlow adds these automatically once their date arrives — open the app now and then so it can catch up.</span></div>
+    <div class="txn-list" id="recurring-list"></div>
   </div>
 
   <!-- STATS -->
@@ -470,11 +656,11 @@ button{font-family:inherit; cursor:pointer;}
     </div>
     <div class="stats-custom-range" id="stats-custom-range" style="display:none;">
       <div class="field" style="flex:1; margin-bottom:0;">
-        <label>From</label>
+        <label for="stats-custom-start">From</label>
         <input type="date" id="stats-custom-start" onchange="applyCustomRange()">
       </div>
       <div class="field" style="flex:1; margin-bottom:0;">
-        <label>To</label>
+        <label for="stats-custom-end">To</label>
         <input type="date" id="stats-custom-end" onchange="applyCustomRange()">
       </div>
     </div>
@@ -483,6 +669,8 @@ button{font-family:inherit; cursor:pointer;}
       <div class="stat-card expense"><div class="lbl">Expenses</div><div class="val mono" id="stats-expense">₱0.00</div></div>
       <div class="stat-card"><div class="lbl">Net</div><div class="val mono" id="stats-net">₱0.00</div></div>
     </div>
+    <div class="section-head"><h2 style="font-size:14px;">Last 6 months</h2></div>
+    <div id="stats-trend-chart"></div>
     <div class="section-head"><h2 style="font-size:14px;">Expenses by classification</h2></div>
     <div id="stats-expense-groups"></div>
     <div class="section-head"><h2 style="font-size:14px;">Income by classification</h2></div>
@@ -492,7 +680,7 @@ button{font-family:inherit; cursor:pointer;}
   <!-- ACCOUNT DETAIL -->
   <div class="view hidden" id="view-account">
     <div class="acc-header">
-      <button class="back-btn" onclick="go('home')">←</button>
+      <button class="back-btn" onclick="go('home')" aria-label="Back">←</button>
       <h2 id="acc-detail-title" style="font-size:16px;">Account</h2>
     </div>
     <div id="acc-detail-body"></div>
@@ -505,12 +693,20 @@ button{font-family:inherit; cursor:pointer;}
 
     <div class="section-head"><h2 style="font-size:14px;">Profile</h2></div>
     <div class="field" style="margin-bottom:10px; position:relative;">
-      <label>Your name <span class="save-indicator" id="username-saved">✓ Saved</span></label>
+      <label for="settings-username">Your name <span class="save-indicator" id="username-saved">✓ Saved</span></label>
       <input type="text" id="settings-username" placeholder="e.g. 0088" oninput="saveUserName(this.value)">
     </div>
-    <div class="settings-row" style="background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:16px;">
+    <div class="settings-row" style="background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:10px;">
       <div class="lbl">🙈 Hide amounts</div>
-      <label class="switch"><input type="checkbox" id="settings-hide-amounts" onchange="toggleHideAmounts()"><span class="track"></span></label>
+      <label class="switch"><input type="checkbox" id="settings-hide-amounts" aria-label="Hide amounts" onchange="toggleHideAmounts()"><span class="track"></span></label>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="lbl" style="font-weight:800; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;">🌙 Appearance</div>
+      <div class="seg" id="theme-seg" role="group" aria-label="Appearance">
+        <button data-v="system" onclick="setThemeMode('system')">Auto</button>
+        <button data-v="light" onclick="setThemeMode('light')">Light</button>
+        <button data-v="dark" onclick="setThemeMode('dark')">Dark</button>
+      </div>
     </div>
 
     <div class="section-head"><h2 style="font-size:14px;">Include in home total</h2></div>
@@ -534,10 +730,10 @@ button{font-family:inherit; cursor:pointer;}
   </div>
 
   <div class="bottomnav">
-    <button class="navbtn active" id="nav-home" onclick="go('home')"><span class="ic">🏠</span>Home</button>
-    <button class="fab" onclick="openTxnModal()">+</button>
-    <button class="navbtn" id="nav-stats" onclick="go('stats')"><span class="ic">📊</span>Stats</button>
-    <button class="navbtn" id="nav-txns" onclick="go('txns')"><span class="ic">📒</span>Transactions</button>
+    <button class="navbtn active" id="nav-home" onclick="go('home')" aria-current="page"><span class="ic" aria-hidden="true">🏠</span>Home</button>
+    <button class="fab" onclick="haptic('medium'); openTxnModal()" aria-label="Add transaction">+</button>
+    <button class="navbtn" id="nav-stats" onclick="go('stats')"><span class="ic" aria-hidden="true">📊</span>Stats</button>
+    <button class="navbtn" id="nav-txns" onclick="go('txns')"><span class="ic" aria-hidden="true">📒</span>Transactions</button>
   </div>
 
 </div>
@@ -545,13 +741,13 @@ button{font-family:inherit; cursor:pointer;}
 <!-- ===== MODAL: Add/Edit Account ===== -->
 <div class="overlay" id="modal-account">
   <div class="sheet">
-    <button class="sheet-close" onclick="hideOverlay('modal-account')">✕</button>
+    <button class="sheet-close" onclick="hideOverlay('modal-account')" aria-label="Close account form">✕</button>
     <div class="sheet-handle"></div>
     <h3 id="acct-modal-title">Add account</h3>
 
     <div class="field">
-      <label>Type</label>
-      <div class="seg" id="acct-type-seg">
+      <label id="acct-type-label">Type</label>
+      <div class="seg" id="acct-type-seg" role="group" aria-labelledby="acct-type-label">
         <button data-v="bank" class="active">🏦 Bank</button>
         <button data-v="digital">📱 Digital</button>
         <button data-v="cash">💵 Cash</button>
@@ -560,41 +756,41 @@ button{font-family:inherit; cursor:pointer;}
     </div>
 
     <div class="field" id="acct-presets-field">
-      <label>Quick add (Philippines)</label>
-      <div class="presetgrid" id="preset-grid"></div>
+      <label id="acct-presets-label">Quick add (Philippines)</label>
+      <div class="presetgrid" id="preset-grid" role="group" aria-labelledby="acct-presets-label"></div>
     </div>
 
     <div class="field">
-      <label>Name</label>
+      <label for="acct-name">Name</label>
       <input type="text" id="acct-name" placeholder="e.g. BDO Savings">
     </div>
 
     <div class="field">
-      <label>Icon</label>
-      <div class="emoji-row" id="acct-emoji-row"></div>
+      <label id="acct-icon-label">Icon</label>
+      <div class="emoji-row" id="acct-emoji-row" role="group" aria-labelledby="acct-icon-label"></div>
     </div>
 
     <div class="field">
-      <label>Bank logo</label>
-      <div class="logo-row" id="acct-logo-row"></div>
+      <label id="acct-logo-label">Bank logo</label>
+      <div class="logo-row" id="acct-logo-row" role="group" aria-labelledby="acct-logo-label"></div>
     </div>
 
     <div class="field">
-      <label>Color</label>
-      <div class="color-row" id="acct-color-row"></div>
+      <label id="acct-color-label">Color</label>
+      <div class="color-row" id="acct-color-row" role="group" aria-labelledby="acct-color-label"></div>
     </div>
 
     <div class="field" id="acct-opening-field">
-      <label>Opening balance</label>
-      <div class="amount-input"><span class="peso">₱</span><input type="number" inputmode="decimal" id="acct-opening" placeholder="0.00"></div>
+      <label for="acct-opening">Opening balance</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="acct-opening" aria-label="Opening balance in Philippine pesos" placeholder="0.00"></div>
     </div>
 
     <div class="field" id="acct-creditlimit-field">
-      <label>Credit limit</label>
-      <div class="amount-input"><span class="peso">₱</span><input type="number" inputmode="decimal" id="acct-creditlimit" placeholder="0.00"></div>
+      <label for="acct-creditlimit">Credit limit</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="acct-creditlimit" aria-label="Credit limit in Philippine pesos" placeholder="0.00"></div>
     </div>
 
-    <button class="btn-primary" onclick="saveAccount()">Save account</button>
+    <button class="btn-primary" id="acct-save-btn" onclick="saveAccount()">Save account</button>
     <button class="btn-danger" id="acct-delete-btn" style="display:none;" onclick="deleteAccountConfirm()">Delete account</button>
   </div>
 </div>
@@ -602,7 +798,7 @@ button{font-family:inherit; cursor:pointer;}
 <!-- ===== MODAL: Add Transaction ===== -->
 <div class="overlay" id="modal-txn">
   <div class="sheet">
-    <button class="sheet-close" onclick="hideOverlay('modal-txn')">✕</button>
+    <button class="sheet-close" onclick="hideOverlay('modal-txn')" aria-label="Close transaction form">✕</button>
     <div class="sheet-handle"></div>
     <h3>Add transaction</h3>
 
@@ -616,60 +812,129 @@ button{font-family:inherit; cursor:pointer;}
 
     <div class="field">
       <label id="txn-from-label">Account</label>
-      <div class="acc-select-grid" id="txn-from-grid"></div>
+      <div class="acc-select-grid" id="txn-from-grid" role="group" aria-labelledby="txn-from-label"></div>
     </div>
 
     <div class="field" id="txn-to-field" style="display:none;">
-      <label>To account</label>
-      <div class="acc-select-grid" id="txn-to-grid"></div>
+      <label id="txn-to-label">To account</label>
+      <div class="acc-select-grid" id="txn-to-grid" role="group" aria-labelledby="txn-to-label"></div>
     </div>
 
     <div class="field">
-      <label>Amount</label>
-      <div class="amount-input"><span class="peso">₱</span><input type="number" inputmode="decimal" id="txn-amount" placeholder="0.00"></div>
+      <label for="txn-amount">Amount</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="txn-amount" aria-label="Transaction amount in Philippine pesos" placeholder="0.00"></div>
     </div>
 
     <div class="field" id="txn-classification-field">
-      <label>Classification</label>
+      <label for="txn-classification-select">Classification</label>
       <select id="txn-classification-select"></select>
     </div>
 
     <div class="field" id="txn-group-field">
-      <label>Group</label>
+      <label for="txn-group-select">Group</label>
       <select id="txn-group-select"><option value="">Unrestricted</option></select>
     </div>
     <div class="field" id="txn-subgroup-field" style="display:none;">
-      <label>Subgroup</label>
+      <label for="txn-subgroup-select">Subgroup</label>
       <select id="txn-subgroup-select"><option value="">None</option></select>
     </div>
 
     <div class="field">
-      <label>Note</label>
+      <label for="txn-note">Note</label>
       <input type="text" id="txn-note" placeholder="e.g. Groceries, Salary, Rent...">
     </div>
 
     <div class="field">
-      <label>Date</label>
+      <label for="txn-date">Date</label>
       <input type="date" id="txn-date">
     </div>
 
-    <button class="btn-primary" onclick="saveTxn()">Save transaction</button>
+    <button class="btn-primary" id="txn-save-btn" onclick="saveTxn()">Save transaction</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Add/Edit Recurring Transaction ===== -->
+<div class="overlay" id="modal-recurring">
+  <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-recurring')" aria-label="Close recurring form">✕</button>
+    <div class="sheet-handle"></div>
+    <h3 id="recur-modal-title">Add recurring</h3>
+
+    <div class="field">
+      <div class="seg" id="recur-type-seg">
+        <button data-v="expense" class="active">➖ Expense</button>
+        <button data-v="income">➕ Income</button>
+        <button data-v="transfer">🔁 Transfer</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label id="recur-from-label">Account</label>
+      <div class="acc-select-grid" id="recur-from-grid" role="group" aria-labelledby="recur-from-label"></div>
+    </div>
+
+    <div class="field" id="recur-to-field" style="display:none;">
+      <label id="recur-to-label">To account</label>
+      <div class="acc-select-grid" id="recur-to-grid" role="group" aria-labelledby="recur-to-label"></div>
+    </div>
+
+    <div class="field">
+      <label for="recur-amount">Amount</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="recur-amount" aria-label="Recurring amount in Philippine pesos" placeholder="0.00"></div>
+    </div>
+
+    <div class="field" id="recur-classification-field">
+      <label for="recur-classification-select">Classification</label>
+      <select id="recur-classification-select"></select>
+    </div>
+
+    <div class="field" id="recur-group-field">
+      <label for="recur-group-select">Group</label>
+      <select id="recur-group-select"><option value="">Unrestricted</option></select>
+    </div>
+    <div class="field" id="recur-subgroup-field" style="display:none;">
+      <label for="recur-subgroup-select">Subgroup</label>
+      <select id="recur-subgroup-select"><option value="">None</option></select>
+    </div>
+
+    <div class="field">
+      <label for="recur-note">Note</label>
+      <input type="text" id="recur-note" placeholder="e.g. Netflix, Rent, Salary...">
+    </div>
+
+    <div class="field">
+      <label for="recur-frequency">Repeats</label>
+      <select id="recur-frequency">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly" selected>Monthly</option>
+        <option value="yearly">Yearly</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="recur-start-date">Start / next date</label>
+      <input type="date" id="recur-start-date">
+    </div>
+
+    <button class="btn-primary" id="recur-save-btn" onclick="saveRecurring()">Save recurring</button>
+    <button class="btn-danger" id="recur-delete-btn" style="display:none;" onclick="deleteRecurringConfirm()">Delete recurring</button>
   </div>
 </div>
 
 <!-- ===== MODAL: Add Group ===== -->
 <div class="overlay" id="modal-group">
   <div class="sheet">
-    <button class="sheet-close" onclick="hideOverlay('modal-group')">✕</button>
+    <button class="sheet-close" onclick="hideOverlay('modal-group')" aria-label="Close group form">✕</button>
     <div class="sheet-handle"></div>
     <h3 id="group-modal-title">Add group</h3>
     <div class="field">
-      <label id="group-name-label">Group name</label>
+      <label id="group-name-label" for="group-name-input">Group name</label>
       <input type="text" id="group-name-input" placeholder="e.g. Operating Fund, Travel">
     </div>
     <div class="field">
-      <label id="group-amount-label">Amount to allocate</label>
-      <div class="amount-input"><span class="peso">₱</span><input type="number" inputmode="decimal" id="group-amount-input" placeholder="0.00"></div>
+      <label id="group-amount-label" for="group-amount-input">Amount to allocate</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="group-amount-input" aria-label="Amount to allocate in Philippine pesos" placeholder="0.00"></div>
       <div style="font-size:11.5px; color:var(--ink-soft); margin-top:5px;" id="group-amount-hint"></div>
     </div>
     <button class="btn-primary" onclick="saveGroup()">Save</button>
@@ -678,11 +943,11 @@ button{font-family:inherit; cursor:pointer;}
 
 <div class="overlay" id="modal-classification">
   <div class="sheet">
-    <button class="sheet-close" onclick="hideOverlay('modal-classification')">✕</button>
+    <button class="sheet-close" onclick="hideOverlay('modal-classification')" aria-label="Close classification form">✕</button>
     <div class="sheet-handle"></div>
     <h3 id="classification-modal-title">Add classification</h3>
     <div class="field">
-      <label>Name</label>
+      <label for="classification-name-input">Name</label>
       <input type="text" id="classification-name-input" placeholder="e.g. Groceries, Freelance">
     </div>
     <button class="btn-primary" onclick="saveClassification()">Save</button>
@@ -692,28 +957,28 @@ button{font-family:inherit; cursor:pointer;}
 <!-- ===== MODAL: Move money between groups (reallocate) ===== -->
 <div class="overlay" id="modal-reallocate">
   <div class="sheet">
-    <button class="sheet-close" onclick="hideOverlay('modal-reallocate')">✕</button>
+    <button class="sheet-close" onclick="hideOverlay('modal-reallocate')" aria-label="Close move-money form">✕</button>
     <div class="sheet-handle"></div>
     <h3>Move money between groups</h3>
     <div class="data-banner" style="margin-bottom:14px;"><span class="i">↔️</span><span>This just re-labels money that's already in the account — it won't change the account's total balance. Use it to split existing money into groups, e.g. "5,000 is my own money, 3,000 is my mother's."</span></div>
     <div class="field">
-      <label>Amount</label>
-      <div class="amount-input"><span class="peso">₱</span><input type="number" inputmode="decimal" id="realloc-amount" placeholder="0.00"></div>
+      <label for="realloc-amount">Amount</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="realloc-amount" aria-label="Amount to move in Philippine pesos" placeholder="0.00"></div>
     </div>
     <div class="field">
-      <label>From</label>
+      <label for="realloc-from">From</label>
       <select id="realloc-from"></select>
     </div>
     <div class="field">
-      <label>To</label>
+      <label for="realloc-to">To</label>
       <select id="realloc-to"></select>
     </div>
     <div class="field">
-      <label>Note (optional)</label>
+      <label for="realloc-note">Note (optional)</label>
       <input type="text" id="realloc-note" placeholder="e.g. Splitting BDO balance">
     </div>
     <div class="field">
-      <label>Date</label>
+      <label for="realloc-date">Date</label>
       <input type="date" id="realloc-date">
     </div>
     <button class="btn-primary" onclick="saveReallocate()">Move money</button>
@@ -755,31 +1020,106 @@ function defaultState(){
   return {
     accounts: [],
     transactions: [],
+    recurring: [],
     classifications: defaultClassifications(),
-    settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [], userName: '', hideAmounts: false }
+    settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [], userName: '', hideAmounts: false, theme: 'system' }
   };
 }
 let state = defaultState();
 let persistOK = true;
 
+// Cache used by accountBalance() (defined further below). Declared here,
+// ahead of loadState(), because loadState() calls invalidateBalanceCache()
+// immediately and `let` bindings aren't hoisted the way function declarations are.
+let _balanceCache = new Map();
+function invalidateBalanceCache(){ _balanceCache.clear(); }
+
+// Schema for state.settings — add a new field here and migrate() will backfill it
+// on every load without needing a new manual "if(typeof ...)" check.
+const SETTINGS_SCHEMA = {
+  includedAccounts:  { type:'object',  isArray:true, default:()=>[] },
+  excludedGroups:    { type:'object',  isArray:true, default:()=>[] },
+  excludedSubgroups: { type:'object',  isArray:true, default:()=>[] },
+  userName:          { type:'string',  default:()=>'' },
+  hideAmounts:       { type:'boolean', default:()=>false },
+  theme:             { type:'string',  default:()=>'system' },
+};
+
+// Brings any saved state (however old) up to the current shape. Safe to run on
+// every load, including on a state that's already current.
+function migrate(data){
+  if(!data || typeof data !== 'object') data = defaultState();
+  if(!Array.isArray(data.accounts)) data.accounts = [];
+  if(!Array.isArray(data.transactions)) data.transactions = [];
+  if(!Array.isArray(data.recurring)) data.recurring = [];
+  if(!Array.isArray(data.classifications)) data.classifications = defaultClassifications();
+  if(!data.settings || typeof data.settings !== 'object') data.settings = {};
+  Object.keys(SETTINGS_SCHEMA).forEach(key=>{
+    const schema = SETTINGS_SCHEMA[key];
+    const val = data.settings[key];
+    const wrongType = schema.isArray ? !Array.isArray(val) : typeof val !== schema.type;
+    if(val === undefined || wrongType) data.settings[key] = schema.default();
+  });
+  return data;
+}
+
 function loadState(){
   try{
     let raw = localStorage.getItem(STORAGE_KEY);
     if(!raw){ raw = localStorage.getItem(OLD_STORAGE_KEY); }
-    if(raw){ state = JSON.parse(raw); }
-  }catch(e){ persistOK = false; }
+    state = migrate(raw ? JSON.parse(raw) : defaultState());
+    persistOK = true;
+  }catch(e){
+    console.error('Failed to load state:', e);
+    state = defaultState();
+    persistOK = false;
+  }
+  invalidateBalanceCache();
 }
-function saveState(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  catch(e){ persistOK = false; }
-}
-loadState();
 
-// Migration: older saved data won't have a classifications list yet.
-if(!Array.isArray(state.classifications)) state.classifications = defaultClassifications();
-if(!state.settings) state.settings = { includedAccounts: [], excludedGroups: [], excludedSubgroups: [] };
-if(typeof state.settings.userName !== 'string') state.settings.userName = '';
-if(typeof state.settings.hideAmounts !== 'boolean') state.settings.hideAmounts = false;
+function showPersistenceError(msg){
+  toast(msg, { error:true, label:'Dismiss', onClick(){} });
+}
+
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    persistOK = true;
+    invalidateBalanceCache();
+    return true;
+  }catch(e){
+    console.error('Failed to save state:', e);
+    persistOK = false;
+    invalidateBalanceCache();
+    showPersistenceError(e.name==='QuotaExceededError' ? 'Storage full — export a backup to free up space' : 'Could not save your last change');
+    return false;
+  }
+}
+
+/* ---- Undo: bounded snapshot history ----
+   Call snapshotBeforeChange() right before mutating `state` in any action you
+   want to be undoable (deleteTxn already does this). Then pass {label:'Undo', onClick: undo}
+   to toast(). Keeping this opt-in (rather than snapshotting on every saveState call)
+   avoids the cost of stringifying the whole state on every keystroke-level save. */
+const MAX_HISTORY = 50;
+let stateHistory = [];
+function snapshotBeforeChange(){
+  stateHistory.push(JSON.stringify(state));
+  if(stateHistory.length > MAX_HISTORY) stateHistory.shift();
+}
+function undo(){
+  if(!stateHistory.length){ toast('Nothing to undo'); return false; }
+  const prev = stateHistory.pop();
+  try{ state = migrate(JSON.parse(prev)); }
+  catch(e){ toast('Undo failed'); return false; }
+  saveState();
+  render();
+  toast('Undone');
+  return true;
+}
+
+loadState();
+applyTheme();
 
 /* ============ PRESETS ============ */
 const PRESETS = {
@@ -850,7 +1190,15 @@ function avatarInner(a){
   <span class="icon-fallback" style="display:none;">${a.icon}</span>`;
 }
 
+// accountBalance() is called once per account per render (often twice, with
+// respectExclusions true/false), and each call used to walk the *entire*
+// transactions array. For a portfolio with years of history that's an
+// O(accounts × transactions) scan on every render. Cache by (account, mode)
+// and invalidate whenever state is loaded/saved/undone, since that's the
+// only time the underlying transactions can change.
 function accountBalance(acc, respectExclusions){
+  const cacheKey = 'acct:' + acc.id + '|' + (respectExclusions ? '1' : '0');
+  if(_balanceCache.has(cacheKey)) return _balanceCache.get(cacheKey);
   let bal = acc.opening || 0;
   state.transactions.forEach(t=>{
     let amt=0, sign=0, groupId=null, subgroupId=null;
@@ -866,6 +1214,7 @@ function accountBalance(acc, respectExclusions){
     }
     bal += sign*amt;
   });
+  _balanceCache.set(cacheKey, bal);
   return bal;
 }
 
@@ -877,7 +1226,15 @@ function gsMatches(groupId, subgroupId, tGroupId, tSubgroupId){
   return true;
 }
 
+// Same caching rationale as accountBalance() above — groupBalance() is called
+// once per group *and* once per subgroup per account on account-detail renders,
+// each doing its own full scan of state.transactions. Cached in the same
+// _balanceCache map (different key prefix so the two never collide), cleared
+// by the same invalidateBalanceCache() calls.
 function groupBalance(acc, groupId, subgroupId){
+  const subKey = subgroupId===undefined ? 'ALL' : String(subgroupId);
+  const cacheKey = 'group:' + acc.id + '|' + String(groupId) + '|' + subKey;
+  if(_balanceCache.has(cacheKey)) return _balanceCache.get(cacheKey);
   let bal=0;
   state.transactions.forEach(t=>{
     if(t.type === 'reallocate'){
@@ -898,6 +1255,7 @@ function groupBalance(acc, groupId, subgroupId){
     else if(t.type==='transfer' && t.fromAccountId===acc.id) bal-=t.amount;
     else if(isIncomingTransfer) bal+=t.amount;
   });
+  _balanceCache.set(cacheKey, bal);
   return bal;
 }
 
@@ -921,12 +1279,21 @@ function grandTotal(){
   return total;
 }
 
-function toast(msg){
+function toast(msg, action){
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  t.innerHTML = '';
+  t.classList.toggle('toast-error', !!(action && action.error));
+  t.appendChild(document.createTextNode(msg));
+  if(action){
+    const btn = document.createElement('button');
+    btn.className = 'toast-action';
+    btn.textContent = action.label;
+    btn.onclick = (e)=>{ e.stopPropagation(); t.classList.remove('show'); action.onClick(); };
+    t.appendChild(btn);
+  }
   t.classList.add('show');
   clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+  window.__toastTimer = setTimeout(()=>t.classList.remove('show'), action ? 4000 : 1800);
 }
 
 /* ============ NAVIGATION ============ */
@@ -938,9 +1305,12 @@ function go(view, accountId){
   if(accountId) currentAccountId = accountId;
   document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
   document.getElementById('view-'+(view==='account'?'account':view)).classList.remove('hidden');
-  document.getElementById('nav-home').classList.toggle('active', view==='home');
-  document.getElementById('nav-txns').classList.toggle('active', view==='txns');
-  document.getElementById('nav-stats').classList.toggle('active', view==='stats');
+  ['nav-home','nav-txns','nav-stats'].forEach(id=>{
+    const isActive = (id==='nav-home' && view==='home') || (id==='nav-txns' && view==='txns') || (id==='nav-stats' && view==='stats');
+    const el = document.getElementById(id);
+    el.classList.toggle('active', isActive);
+    if(isActive){ el.setAttribute('aria-current','page'); } else { el.removeAttribute('aria-current'); }
+  });
   window.scrollTo(0,0);
   render();
 }
@@ -952,6 +1322,7 @@ function render(){
   if(currentView==='account') renderAccountDetail();
   if(currentView==='settings') renderSettings();
   if(currentView==='stats') renderStats();
+  if(currentView==='recurring') renderRecurring();
 }
 
 function renderHome(){
@@ -1056,7 +1427,7 @@ function txnRowHTML(t, showAccountContext){
       <div class="txn-tag">${escapeHtml(tag)} · ${formatDate(t.date)}</div>
     </div>
     <div class="txn-amt ${amtClass} mono">${sign}${peso(t.amount)}</div>
-    <button class="txn-del" onclick="deleteTxn('${t.id}')">✕</button>
+    <button class="txn-del" onclick="deleteTxn('${t.id}')" aria-label="Delete transaction: ${escapeHtml(label)}">✕</button>
   </div>`;
 }
 function formatDate(d){
@@ -1067,8 +1438,11 @@ function formatDate(d){
 function findGroup(acc, groupId){ return (acc.groups||[]).find(g=>g.id===groupId); }
 
 function deleteTxn(id){
+  snapshotBeforeChange();
   state.transactions = state.transactions.filter(t=>t.id!==id);
-  saveState(); render(); toast('Transaction deleted');
+  const ok = saveState();
+  render();
+  if(ok) toast('Transaction deleted', { label:'Undo', onClick: undo });
 }
 
 /* ============ RENDER: ACCOUNT DETAIL ============ */
@@ -1141,12 +1515,12 @@ function renderAccountDetail(){
           </div>
         </div>
         <div class="group-body ${open?'open':''}">
-          ${subs.map(s=>`<div class="sub-row"><span class="sname">${escapeHtml(s.name)}</span><span class="sright"><span class="sbal mono">${peso(groupBalance(acc,g.id,s.id))}</span><button class="sub-add-btn" title="Move money in" style="background:var(--teal-dark);" onclick="event.stopPropagation(); openReallocateModal('${acc.id}', null, null, '${g.id}', '${s.id}')">↔</button><button class="sub-add-btn" title="Add transaction" onclick="event.stopPropagation(); openGroupTxnModal('${acc.id}','${g.id}','${s.id}')">+</button></span></div>`).join('')}
+          ${subs.map(s=>`<div class="sub-row"><span class="sname">${escapeHtml(s.name)}</span><span class="sright"><span class="sbal mono">${peso(groupBalance(acc,g.id,s.id))}</span><button class="sub-add-btn" title="Move money in" aria-label="Move money into ${escapeHtml(s.name)}" style="background:var(--teal-dark);" onclick="event.stopPropagation(); openReallocateModal('${acc.id}', null, null, '${g.id}', '${s.id}')">↔</button><button class="sub-add-btn" title="Add transaction" aria-label="Add transaction to ${escapeHtml(s.name)}" onclick="event.stopPropagation(); openGroupTxnModal('${acc.id}','${g.id}','${s.id}')">+</button></span></div>`).join('')}
           <div class="mini-add-row">
             <button class="mini-add" onclick="event.stopPropagation(); openGroupTxnModal('${acc.id}','${g.id}')">+ Add money</button>
             <button class="mini-add" onclick="event.stopPropagation(); openReallocateModal('${acc.id}', null, null, '${g.id}', null)">↔ Move money in</button>
             <button class="mini-add" onclick="openSubgroupModal('${acc.id}','${g.id}')">+ Add subgroup</button>
-            <button class="mini-add" style="color:var(--coral);" onclick="deleteGroup('${acc.id}','${g.id}')">Delete group</button>
+            <button class="mini-add" style="color:var(--color-danger);" onclick="deleteGroup('${acc.id}','${g.id}')">Delete group</button>
           </div>
         </div>
       </div>`;
@@ -1228,15 +1602,21 @@ function computeStats(period){
   });
   return {income, expense, incomeByClass, expenseByClass};
 }
-function groupBarsHTML(map, color){
+function groupBarsHTML(map, color, total){
   const entries = Object.entries(map).sort((a,b)=>b[1]-a[1]);
   if(entries.length===0) return `<div class="empty" style="padding:16px; margin-bottom:14px;"><span style="font-size:12px;">Nothing here yet.</span></div>`;
   const max = entries[0][1] || 1;
-  return entries.map(([name,amt])=>`
+  const totalForPct = total || max;
+  const hideAmt = !!(state.settings && state.settings.hideAmounts);
+  return entries.map(([name,amt])=>{
+    const pct = totalForPct ? Math.round(amt/totalForPct*100) : 0;
+    const pctLabel = hideAmt ? '' : ` <span style="color:var(--ink-soft); font-weight:700;">· ${pct}%</span>`;
+    return `
     <div class="stat-bar-row">
-      <div class="stat-bar-top"><span>${escapeHtml(name)}</span><span class="mono">${peso(amt)}</span></div>
+      <div class="stat-bar-top"><span>${escapeHtml(name)}</span><span class="mono">${peso(amt)}${pctLabel}</span></div>
       <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${Math.max(4, amt/max*100)}%; background:${color}"></div></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function renderStats(){
   const {income, expense, incomeByClass, expenseByClass} = computeStats(statsPeriod);
@@ -1245,8 +1625,49 @@ function renderStats(){
   const netEl = document.getElementById('stats-net');
   netEl.textContent = peso(income-expense);
   netEl.classList.toggle('neg-text', (income-expense)<0);
-  document.getElementById('stats-expense-groups').innerHTML = groupBarsHTML(expenseByClass, 'var(--coral)');
-  document.getElementById('stats-income-groups').innerHTML = groupBarsHTML(incomeByClass, 'var(--teal-dark)');
+  document.getElementById('stats-expense-groups').innerHTML = groupBarsHTML(expenseByClass, 'var(--coral)', expense);
+  document.getElementById('stats-income-groups').innerHTML = groupBarsHTML(incomeByClass, 'var(--teal-dark)', income);
+  renderTrendChart();
+}
+// Last `monthsCount` calendar months (oldest first, current month last), each
+// summed from real transactions — independent of the period toggle above, so
+// the chart always gives a stable at-a-glance trend.
+function computeMonthlyTrend(monthsCount){
+  const now = new Date();
+  const months = [];
+  for(let i=monthsCount-1; i>=0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    months.push({ key, label: d.toLocaleDateString('en-PH', {month:'short'}), income:0, expense:0 });
+  }
+  const byKey = Object.fromEntries(months.map(m=>[m.key, m]));
+  state.transactions.forEach(t=>{
+    if(t.type==='transfer' || t.type==='reallocate') return;
+    const m = byKey[(t.date||'').slice(0,7)];
+    if(!m) return;
+    if(t.type==='income') m.income += t.amount; else m.expense += t.amount;
+  });
+  return months;
+}
+function renderTrendChart(){
+  const el = document.getElementById('stats-trend-chart');
+  if(!el) return;
+  const months = computeMonthlyTrend(6);
+  const max = Math.max(1, ...months.map(m=>Math.max(m.income, m.expense)));
+  const hideAmt = !!(state.settings && state.settings.hideAmounts);
+  el.innerHTML = `<div class="trend-chart">
+      <div class="legend"><span><i class="dot" style="background:var(--teal-dark)"></i>Income</span><span><i class="dot" style="background:var(--coral)"></i>Expenses</span></div>
+      <div class="trend-bars">
+        ${months.map(m=>`
+          <div class="trend-col">
+            <div class="trend-bargroup" title="${escapeHtml(m.label)}${hideAmt ? '' : (': Income ' + peso(m.income) + ' · Expenses ' + peso(m.expense))}">
+              <div class="trend-bar income" style="height:${Math.max(2, m.income/max*100)}%"></div>
+              <div class="trend-bar expense" style="height:${Math.max(2, m.expense/max*100)}%"></div>
+            </div>
+            <div class="trend-lbl">${escapeHtml(m.label)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
 }
 
 /* ============ DATA EXPORT / IMPORT ============ */
@@ -1419,21 +1840,24 @@ function renderLogoRow(){
 function pickLogo(slug){ acctModalState.logo = slug; renderLogoRow(); }
 
 function saveAccount(){
-  const name = document.getElementById('acct-name').value.trim();
-  if(!name){ toast('Give this account a name'); return; }
+  const nameCheck = Validators.accountName(document.getElementById('acct-name').value);
+  if(!nameCheck.valid){ toast(nameCheck.error); return; }
+  const name = nameCheck.value;
   const creditLimitRaw = document.getElementById('acct-creditlimit').value;
   const creditLimit = acctModalState.type==='credit' && creditLimitRaw!=='' ? (parseFloat(creditLimitRaw)||0) : undefined;
-  if(acctModalState.editId){
-    const acc = getAccount(acctModalState.editId);
-    acc.name = name; acc.type = acctModalState.type; acc.icon = acctModalState.icon; acc.color = acctModalState.color; acc.logo = acctModalState.logo;
-    acc.creditLimit = creditLimit;
-  } else {
-    const opening = acctModalState.type==='credit' ? 0 : (parseFloat(document.getElementById('acct-opening').value) || 0);
-    const newAcc = { id: uid(), name, type: acctModalState.type, icon: acctModalState.icon, color: acctModalState.color, logo: acctModalState.logo, opening, creditLimit, groups: [] };
-    state.accounts.push(newAcc);
-    state.settings.includedAccounts.push(newAcc.id);
-  }
-  saveState(); hideOverlay('modal-account'); toast('Account saved'); go(currentView==='account'?'account':'home', acctModalState.editId||undefined);
+  runWithBusy('acct-save-btn', ()=>{
+    if(acctModalState.editId){
+      const acc = getAccount(acctModalState.editId);
+      acc.name = name; acc.type = acctModalState.type; acc.icon = acctModalState.icon; acc.color = acctModalState.color; acc.logo = acctModalState.logo;
+      acc.creditLimit = creditLimit;
+    } else {
+      const opening = acctModalState.type==='credit' ? 0 : (parseFloat(document.getElementById('acct-opening').value) || 0);
+      const newAcc = { id: uid(), name, type: acctModalState.type, icon: acctModalState.icon, color: acctModalState.color, logo: acctModalState.logo, opening, creditLimit, groups: [] };
+      state.accounts.push(newAcc);
+      state.settings.includedAccounts.push(newAcc.id);
+    }
+    saveState(); hideOverlay('modal-account'); haptic('medium'); toast('Account saved'); go(currentView==='account'?'account':'home', acctModalState.editId||undefined);
+  });
 }
 function deleteAccountConfirm(){
   if(!confirm('Delete this account and all its transactions? This cannot be undone.')) return;
@@ -1441,7 +1865,7 @@ function deleteAccountConfirm(){
   state.accounts = state.accounts.filter(a=>a.id!==id);
   state.transactions = state.transactions.filter(t=> t.accountId!==id && t.fromAccountId!==id && t.toAccountId!==id);
   state.settings.includedAccounts = state.settings.includedAccounts.filter(x=>x!==id);
-  saveState(); hideOverlay('modal-account'); toast('Account deleted'); go('home');
+  saveState(); hideOverlay('modal-account'); haptic('heavy'); toast('Account deleted'); go('home');
 }
 
 /* ============ MODAL: TRANSACTION ============ */
@@ -1523,27 +1947,270 @@ function renderTxnSubgroupSelect(){
   }
 }
 
-function saveTxn(){
-  const amount = parseFloat(document.getElementById('txn-amount').value);
-  if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
-  if(!txnModalState.fromId){ toast('Choose an account'); return; }
-  if(txnModalState.type==='transfer' && !txnModalState.toId){ toast('Choose a destination account'); return; }
+// Centralized so every entry point that touches an amount, an account name, or
+// a full transaction rejects the same bad inputs the same way, instead of each
+// save function inventing its own ad-hoc checks.
+const Validators = {
+  amount(raw){
+    const num = parseFloat(raw);
+    if(!Number.isFinite(num)) return { valid:false, error:'Enter a valid amount' };
+    if(num <= 0) return { valid:false, error:'Amount must be greater than zero' };
+    if(num > 999999999) return { valid:false, error:'That amount looks too large' };
+    return { valid:true, value:num };
+  },
 
-  const base = {
-    id: uid(), amount, note: document.getElementById('txn-note').value.trim(),
-    date: document.getElementById('txn-date').value || todayStr(), createdAt: Date.now()
-  };
-  if(txnModalState.type==='transfer'){
-    state.transactions.push({...base, type:'transfer', fromAccountId:txnModalState.fromId, toAccountId:txnModalState.toId,
-      groupId: document.getElementById('txn-group-select').value || null,
-      subgroupId: document.getElementById('txn-subgroup-select').value || null});
-  } else {
-    state.transactions.push({...base, type:txnModalState.type, accountId:txnModalState.fromId,
-      groupId: document.getElementById('txn-group-select').value || null,
-      subgroupId: document.getElementById('txn-subgroup-select').value || null,
-      classificationId: document.getElementById('txn-classification-select').value || null});
+  accountName(raw){
+    const value = (raw||'').trim();
+    if(!value) return { valid:false, error:'Give this account a name' };
+    if(value.length > 50) return { valid:false, error:'Name is too long (max 50 characters)' };
+    return { valid:true, value };
+  },
+
+  // txn: { amount, accountId, toAccountId, type, date } — date is a 'YYYY-MM-DD'
+  // string (matches <input type="date"> and todayStr()), so plain string
+  // comparison avoids timezone bugs that Date object comparisons would have.
+  transaction(txn){
+    const amountCheck = this.amount(txn.amount);
+    if(!amountCheck.valid) return amountCheck;
+    if(!txn.accountId) return { valid:false, error:'Choose an account' };
+    if(txn.type==='transfer'){
+      if(!txn.toAccountId) return { valid:false, error:'Choose a destination account' };
+      if(txn.toAccountId===txn.accountId) return { valid:false, error:'Choose two different accounts' };
+    }
+    if(txn.date && txn.date > todayStr()) return { valid:false, error:'Cannot add future-dated transactions' };
+    return { valid:true, amount: amountCheck.value };
+  },
+};
+
+function saveTxn(){
+  const date = document.getElementById('txn-date').value || todayStr();
+  const check = Validators.transaction({
+    amount: document.getElementById('txn-amount').value,
+    accountId: txnModalState.fromId,
+    toAccountId: txnModalState.toId,
+    type: txnModalState.type,
+    date,
+  });
+  if(!check.valid){ toast(check.error); return; }
+
+  runWithBusy('txn-save-btn', ()=>{
+    snapshotBeforeChange();
+    const base = {
+      id: uid(), amount: check.amount, note: document.getElementById('txn-note').value.trim(),
+      date, createdAt: Date.now()
+    };
+    if(txnModalState.type==='transfer'){
+      state.transactions.push({...base, type:'transfer', fromAccountId:txnModalState.fromId, toAccountId:txnModalState.toId,
+        groupId: document.getElementById('txn-group-select').value || null,
+        subgroupId: document.getElementById('txn-subgroup-select').value || null});
+    } else {
+      state.transactions.push({...base, type:txnModalState.type, accountId:txnModalState.fromId,
+        groupId: document.getElementById('txn-group-select').value || null,
+        subgroupId: document.getElementById('txn-subgroup-select').value || null,
+        classificationId: document.getElementById('txn-classification-select').value || null});
+    }
+    const ok = saveState();
+    hideOverlay('modal-txn'); render();
+    if(ok){ haptic('medium'); toast('Transaction added', { label:'Undo', onClick: undo }); }
+  });
+}
+
+/* ============ RECURRING TRANSACTIONS ============ */
+const FREQ_LABEL = {daily:'Daily', weekly:'Weekly', monthly:'Monthly', yearly:'Yearly'};
+function advanceDate(dateStr, freq){
+  const d = new Date(dateStr+'T00:00:00');
+  if(freq==='daily') d.setDate(d.getDate()+1);
+  else if(freq==='weekly') d.setDate(d.getDate()+7);
+  else if(freq==='yearly') d.setFullYear(d.getFullYear()+1);
+  else d.setMonth(d.getMonth()+1); // monthly is the default/fallback
+  return d.toISOString().slice(0,10);
+}
+// Creates a real transaction for every occurrence that's now due (nextDate <=
+// today), catching up on any that were missed while the app was closed. The
+// 500-iteration guard just prevents a runaway loop from a very old daily rule.
+function processRecurring(){
+  const today = todayStr();
+  let created = 0;
+  (state.recurring||[]).forEach(r=>{
+    if(!r.active) return;
+    let guard = 0;
+    while(r.nextDate && r.nextDate <= today && guard < 500){
+      const base = { id: uid(), amount:r.amount, note:r.note||'', date:r.nextDate, createdAt:Date.now(), recurringId:r.id };
+      if(r.type==='transfer'){
+        state.transactions.push({...base, type:'transfer', fromAccountId:r.accountId, toAccountId:r.toAccountId,
+          groupId:r.groupId||null, subgroupId:r.subgroupId||null});
+      } else {
+        state.transactions.push({...base, type:r.type, accountId:r.accountId,
+          groupId:r.groupId||null, subgroupId:r.subgroupId||null, classificationId:r.classificationId||null});
+      }
+      created++; guard++;
+      r.nextDate = advanceDate(r.nextDate, r.frequency);
+    }
+  });
+  if(created) saveState();
+  return created;
+}
+function renderRecurring(){
+  const el = document.getElementById('recurring-list');
+  if(!el) return;
+  const list = [...(state.recurring||[])].sort((a,b)=> (a.nextDate||'').localeCompare(b.nextDate||''));
+  if(list.length===0){
+    el.innerHTML = `<div class="empty"><span class="em">🔁</span><b>No recurring transactions</b>Tap the + button to automate bills, salary, or subscriptions.</div>`;
+    return;
   }
-  saveState(); hideOverlay('modal-txn'); toast('Transaction added'); render();
+  el.innerHTML = list.map(r=>recurRowHTML(r)).join('');
+}
+function recurRowHTML(r){
+  let icon, cls, sign, amtClass, label;
+  if(r.type==='income'){ icon='➕'; cls='income'; sign='+'; amtClass='pos'; }
+  else if(r.type==='expense'){ icon='➖'; cls='expense'; sign='-'; amtClass='neg'; }
+  else { icon='🔁'; cls='transfer'; sign=''; amtClass=''; }
+  const acc = getAccount(r.accountId);
+  const toAcc = r.type==='transfer' ? getAccount(r.toAccountId) : null;
+  const rcls = r.classificationId ? getClassification(r.classificationId) : null;
+  label = r.note || (rcls ? rcls.name : (r.type==='transfer' ? 'Transfer' : (r.type==='income'?'Income':'Expense')));
+  const acctTag = r.type==='transfer' ? `${acc?acc.name:'?'} → ${toAcc?toAcc.name:'?'}` : (acc ? acc.name : '?');
+  const tag = `${acctTag} · ${FREQ_LABEL[r.frequency]||''} · Next ${formatDate(r.nextDate)}`;
+  return `<div class="txn-row" style="${r.active?'':'opacity:.55;'}" onclick="openRecurringModal('${r.id}')">
+    <div class="txn-ic ${cls}">${icon}</div>
+    <div class="txn-info">
+      <div class="txn-note">${escapeHtml(label)}</div>
+      <div class="txn-tag">${escapeHtml(tag)}</div>
+    </div>
+    <div class="txn-amt ${amtClass} mono">${sign}${peso(r.amount)}</div>
+    <label class="switch" onclick="event.stopPropagation()"><input type="checkbox" ${r.active?'checked':''} aria-label="${r.active?'Pause':'Resume'} recurring: ${escapeHtml(label)}" onchange="toggleRecurringActive('${r.id}')"><span class="track"></span></label>
+  </div>`;
+}
+function toggleRecurringActive(id){
+  const r = (state.recurring||[]).find(x=>x.id===id);
+  if(!r) return;
+  r.active = !r.active;
+  saveState(); renderRecurring(); toast(r.active ? 'Recurring resumed' : 'Recurring paused');
+}
+
+let recurModalState = { type:'expense', fromId:null, toId:null, editId:null };
+function openRecurringModal(editId){
+  if(state.accounts.length===0){ toast('Add an account first'); openAccountModal(); return; }
+  const r = editId ? (state.recurring||[]).find(x=>x.id===editId) : null;
+  recurModalState = r
+    ? { type:r.type, fromId:r.accountId, toId:r.toAccountId||null, editId:r.id }
+    : { type:'expense', fromId: state.accounts[0].id, toId:null, editId:null };
+  document.getElementById('recur-modal-title').textContent = r ? 'Edit recurring' : 'Add recurring';
+  document.getElementById('recur-amount').value = r ? r.amount : '';
+  document.getElementById('recur-note').value = r ? (r.note||'') : '';
+  document.getElementById('recur-frequency').value = r ? r.frequency : 'monthly';
+  document.getElementById('recur-start-date').value = r ? r.nextDate : todayStr();
+  document.getElementById('recur-delete-btn').style.display = r ? 'block' : 'none';
+  renderRecurTypeSeg();
+  renderRecurAccGrids();
+  renderRecurGroupSelects();
+  renderRecurClassificationSelect();
+  if(r){
+    document.getElementById('recur-group-select').value = r.groupId || '';
+    renderRecurSubgroupSelect();
+    if(r.subgroupId) document.getElementById('recur-subgroup-select').value = r.subgroupId;
+    if(r.classificationId) document.getElementById('recur-classification-select').value = r.classificationId;
+  }
+  showOverlay('modal-recurring');
+}
+function renderRecurTypeSeg(){
+  const seg = document.getElementById('recur-type-seg');
+  [...seg.children].forEach(b=>{
+    b.classList.toggle('active', b.dataset.v===recurModalState.type);
+    b.onclick = ()=>{ recurModalState.type=b.dataset.v; renderRecurTypeSeg(); renderRecurAccGrids(); renderRecurGroupSelects(); renderRecurClassificationSelect(); };
+  });
+  document.getElementById('recur-to-field').style.display = recurModalState.type==='transfer' ? 'block' : 'none';
+  document.getElementById('recur-from-label').textContent = recurModalState.type==='transfer' ? 'From account' : 'Account';
+  document.getElementById('recur-group-field').style.display = recurModalState.type==='transfer' ? 'none' : 'block';
+}
+function renderRecurAccGrids(){
+  const fromGrid = document.getElementById('recur-from-grid');
+  fromGrid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${recurModalState.fromId===a.id?'active':''}" onclick="pickRecurFrom('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><span>${escapeHtml(a.name)}</span></div>`).join('');
+  const toGrid = document.getElementById('recur-to-grid');
+  toGrid.innerHTML = state.accounts.filter(a=>a.id!==recurModalState.fromId).map(a=>`<div class="acc-opt ${recurModalState.toId===a.id?'active':''}" onclick="pickRecurTo('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><span>${escapeHtml(a.name)}</span></div>`).join('');
+}
+function pickRecurFrom(id){ recurModalState.fromId=id; if(recurModalState.toId===id) recurModalState.toId=null; renderRecurAccGrids(); renderRecurGroupSelects(); }
+function pickRecurTo(id){ recurModalState.toId=id; renderRecurAccGrids(); }
+function renderRecurGroupSelects(){
+  const acc = getAccount(recurModalState.fromId);
+  const gsel = document.getElementById('recur-group-select');
+  const groups = acc ? (acc.groups||[]) : [];
+  gsel.innerHTML = '<option value="">Unrestricted</option>' + groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+  gsel.onchange = renderRecurSubgroupSelect;
+  renderRecurSubgroupSelect();
+}
+function renderRecurSubgroupSelect(){
+  const acc = getAccount(recurModalState.fromId);
+  const gid = document.getElementById('recur-group-select').value;
+  const field = document.getElementById('recur-subgroup-field');
+  const ssel = document.getElementById('recur-subgroup-select');
+  const g = acc && gid ? findGroup(acc, gid) : null;
+  if(g && (g.subgroups||[]).length){
+    field.style.display='block';
+    ssel.innerHTML = '<option value="">None</option>' + g.subgroups.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  } else {
+    field.style.display='none'; ssel.innerHTML='<option value="">None</option>';
+  }
+}
+function renderRecurClassificationSelect(){
+  const field = document.getElementById('recur-classification-field');
+  const sel = document.getElementById('recur-classification-select');
+  if(recurModalState.type === 'transfer'){ field.style.display = 'none'; return; }
+  field.style.display = 'block';
+  const list = classificationsByType(recurModalState.type);
+  sel.innerHTML = '<option value="">Unclassified</option>'
+    + list.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
+    + '<option value="__new__">+ Add new classification…</option>';
+  sel.onchange = ()=>{
+    if(sel.value === '__new__'){
+      const currentType = recurModalState.type;
+      openClassificationModal(currentType, (newId)=>{ renderRecurClassificationSelect(); sel.value = newId; });
+      sel.value = '';
+    }
+  };
+}
+function saveRecurring(){
+  const amountCheck = Validators.amount(document.getElementById('recur-amount').value);
+  if(!amountCheck.valid){ toast(amountCheck.error); return; }
+  if(!recurModalState.fromId){ toast('Choose an account'); return; }
+  if(recurModalState.type==='transfer'){
+    if(!recurModalState.toId){ toast('Choose a destination account'); return; }
+    if(recurModalState.toId===recurModalState.fromId){ toast('Choose two different accounts'); return; }
+  }
+  const startDate = document.getElementById('recur-start-date').value || todayStr();
+  const frequency = document.getElementById('recur-frequency').value;
+  const groupId = document.getElementById('recur-group-select').value || null;
+  const subgroupId = document.getElementById('recur-subgroup-select').value || null;
+  const classificationId = recurModalState.type!=='transfer' ? (document.getElementById('recur-classification-select').value || null) : null;
+  const note = document.getElementById('recur-note').value.trim();
+
+  snapshotBeforeChange();
+  if(recurModalState.editId){
+    const r = (state.recurring||[]).find(x=>x.id===recurModalState.editId);
+    if(r){
+      Object.assign(r, { type:recurModalState.type, accountId:recurModalState.fromId, toAccountId:recurModalState.toId,
+        amount:amountCheck.value, note, groupId, subgroupId, classificationId, frequency });
+      if(r.nextDate !== startDate) r.nextDate = startDate;
+    }
+  } else {
+    state.recurring = state.recurring || [];
+    state.recurring.push({
+      id: uid(), type:recurModalState.type, accountId:recurModalState.fromId, toAccountId:recurModalState.toId,
+      amount:amountCheck.value, note, groupId, subgroupId, classificationId, frequency,
+      nextDate: startDate, active:true, createdAt: Date.now()
+    });
+  }
+  const ok = saveState();
+  hideOverlay('modal-recurring');
+  processRecurring();
+  render();
+  if(ok){ haptic('medium'); toast('Recurring saved'); }
+}
+function deleteRecurringConfirm(){
+  if(!recurModalState.editId) return;
+  if(!confirm('Delete this recurring transaction? Transactions it already created will stay.')) return;
+  state.recurring = (state.recurring||[]).filter(r=>r.id!==recurModalState.editId);
+  saveState(); hideOverlay('modal-recurring'); renderRecurring(); toast('Recurring deleted');
 }
 
 /* ============ MODAL: CLASSIFICATION ============ */
@@ -1706,11 +2373,12 @@ function renderClassificationSettings(){
   wrap.innerHTML = list.length ? list.map(c=>`
     <div class="settings-row" style="background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:8px;">
       <div class="lbl">${escapeHtml(c.name)}</div>
-      <button class="txn-del" onclick="deleteClassification('${c.id}')">✕</button>
+      <button class="txn-del" onclick="deleteClassification('${c.id}')" aria-label="Delete classification: ${escapeHtml(c.name)}">✕</button>
     </div>`).join('') : `<div class="empty" style="padding:16px;"><span style="font-size:12px;">No ${classificationSettingsType} classifications yet.</span></div>`;
 }
 function renderSettings(){
   applyHideAmountsUI();
+  renderThemeSeg();
   renderLastBackupNote();
   const nameInput = document.getElementById('settings-username');
   if(nameInput && document.activeElement !== nameInput) nameInput.value = state.settings.userName || '';
@@ -1727,7 +2395,7 @@ function renderSettings(){
       <div class="settings-row">
         <div class="av" style="background:${a.color}">${avatarInner(a)}</div>
         <div class="lbl">${escapeHtml(a.name)}</div>
-        <label class="switch"><input type="checkbox" ${included?'checked':''} onchange="toggleIncluded('${a.id}')"><span class="track"></span></label>
+        <label class="switch"><input type="checkbox" ${included?'checked':''} aria-label="Include ${escapeHtml(a.name)} in home total" onchange="toggleIncluded('${a.id}')"><span class="track"></span></label>
       </div>
       ${groups.length ? groups.map(g=>{
         const gKey = a.id+':'+g.id;
@@ -1735,7 +2403,7 @@ function renderSettings(){
         const gEffective = included && gIncluded;
         return `<div class="settings-row sub-toggle">
           <div class="lbl" style="font-weight:700; font-size:12.5px; color:var(--ink-soft);">↳ ${escapeHtml(g.name)}</div>
-          <label class="switch"><input type="checkbox" ${gEffective?'checked':''} ${included?'':'disabled'} onchange="toggleGroupIncluded('${gKey}')"><span class="track"></span></label>
+          <label class="switch"><input type="checkbox" ${gEffective?'checked':''} ${included?'':'disabled'} aria-label="Include ${escapeHtml(g.name)} group in home total" onchange="toggleGroupIncluded('${gKey}')"><span class="track"></span></label>
         </div>
         ${(g.subgroups||[]).map(s=>{
           const sKey = a.id+':'+g.id+':'+s.id;
@@ -1743,7 +2411,7 @@ function renderSettings(){
           const sEffective = gEffective && sIncluded;
           return `<div class="settings-row subgroup-settings">
             <div class="lbl" style="font-weight:700; font-size:11.5px; color:var(--ink-soft);">↳ ${escapeHtml(s.name)}</div>
-            <label class="switch"><input type="checkbox" ${sEffective?'checked':''} ${included&&gIncluded?'':'disabled'} onchange="toggleSubgroupIncluded('${sKey}')"><span class="track"></span></label>
+            <label class="switch"><input type="checkbox" ${sEffective?'checked':''} ${included&&gIncluded?'':'disabled'} aria-label="Include ${escapeHtml(s.name)} subgroup in home total" onchange="toggleSubgroupIncluded('${sKey}')"><span class="track"></span></label>
           </div>`;
         }).join('')}`;
       }).join('') : ''}
@@ -1787,9 +2455,40 @@ function toggleHideAmounts(){
 function applyHideAmountsUI(){
   const hidden = state.settings.hideAmounts;
   const btn = document.getElementById('hide-amounts-btn');
-  if(btn) btn.textContent = hidden ? '🙈' : '👁️';
+  if(btn){
+    btn.textContent = hidden ? '🙈' : '👁️';
+    const label = hidden ? 'Show amounts' : 'Hide amounts';
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('title', label);
+  }
   const sw = document.getElementById('settings-hide-amounts');
   if(sw) sw.checked = hidden;
+}
+
+/* ============ THEME ============ */
+function resolveTheme(pref){
+  if(pref === 'dark' || pref === 'light') return pref;
+  return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', resolveTheme(state.settings.theme));
+  renderThemeSeg();
+}
+function renderThemeSeg(){
+  const seg = document.getElementById('theme-seg');
+  if(!seg) return;
+  [...seg.children].forEach(b=> b.classList.toggle('active', b.dataset.v === state.settings.theme));
+}
+function setThemeMode(mode){
+  state.settings.theme = mode;
+  saveState();
+  applyTheme();
+}
+// Follow the OS setting live when the user hasn't overridden it with Light/Dark.
+if(window.matchMedia){
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
+    if(state.settings.theme === 'system') applyTheme();
+  });
 }
 
 /* ============ GREETING ============ */
@@ -1840,10 +2539,12 @@ function confirmReset(){
   if(val.trim().toUpperCase() !== 'DELETE'){ toast('Reset cancelled — text didn\'t match'); return; }
   const keepName = state.settings.userName;
   const keepHide = state.settings.hideAmounts;
+  const keepTheme = state.settings.theme;
   state = defaultState();
   state.settings.userName = keepName;
   state.settings.hideAmounts = keepHide;
-  saveState(); toast('All data cleared'); go('home');
+  state.settings.theme = keepTheme;
+  saveState(); toast('All data cleared'); go('home'); applyTheme();
 }
 
 /* ============ OVERLAY HELPERS ============ */
@@ -1853,9 +2554,102 @@ document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('show'); });
 });
 
+/* ============ MOBILE UX: HAPTICS ============ */
+function haptic(type = 'light'){
+  if(navigator.vibrate){
+    navigator.vibrate(type === 'light' ? 10 : type === 'medium' ? 20 : 40);
+  }
+}
+// Baseline tap feedback on any button-like control, so we don't have to
+// wire haptic() into every single onclick by hand.
+document.addEventListener('touchstart', e=>{
+  const el = e.target.closest('button, .navbtn, .chip, .switch, label.switch');
+  if(el) haptic('light');
+}, { passive:true });
+
+/* ============ MOBILE UX: LOADING STATES ============ */
+// Marks a button aria-busy (shows the spinner defined in CSS) while `work`
+// runs, then clears it. A short minimum delay keeps fast saves from
+// flashing the spinner for an imperceptible instant.
+function runWithBusy(buttonId, work, minDelay = 220){
+  const btn = document.getElementById(buttonId);
+  if(btn) btn.setAttribute('aria-busy', 'true');
+  setTimeout(()=>{
+    try{ work(); }
+    finally{ if(btn) btn.removeAttribute('aria-busy'); }
+  }, minDelay);
+}
+
+/* ============ MOBILE UX: SWIPE TO CLOSE MODALS ============ */
+// Drag the sheet handle down to dismiss — mirrors native bottom-sheet
+// behavior. Scoped to the handle (not the whole sheet) so it never fights
+// with scrolling a long form.
+(function setupSheetSwipeClose(){
+  document.querySelectorAll('.overlay').forEach(overlay=>{
+    const sheet = overlay.querySelector('.sheet');
+    const handle = overlay.querySelector('.sheet-handle');
+    if(!sheet || !handle) return;
+    let startY = 0, deltaY = 0, dragging = false;
+    const onStart = (y)=>{ dragging = true; startY = y; deltaY = 0; sheet.style.transition = 'none'; };
+    const onMove = (y)=>{
+      if(!dragging) return;
+      deltaY = Math.max(0, y - startY);
+      sheet.style.transform = `translateY(${deltaY}px)`;
+    };
+    const onEnd = ()=>{
+      if(!dragging) return;
+      dragging = false;
+      sheet.style.transition = '';
+      sheet.style.transform = '';
+      if(deltaY > 90){
+        haptic('light');
+        overlay.classList.remove('show');
+      }
+      deltaY = 0;
+    };
+    handle.addEventListener('touchstart', e=> onStart(e.touches[0].clientY), { passive:true });
+    handle.addEventListener('touchmove', e=> onMove(e.touches[0].clientY), { passive:true });
+    handle.addEventListener('touchend', onEnd);
+    handle.addEventListener('touchcancel', onEnd);
+  });
+})();
+
+/* ============ MOBILE UX: SWIPE BETWEEN TABS ============ */
+// Horizontal swipe on the main view switches Home ↔ Stats ↔ Transactions,
+// matching their left-to-right order in the bottom nav.
+(function setupTabSwipeNav(){
+  const order = ['home','stats','txns'];
+  const app = document.getElementById('app');
+  if(!app) return;
+  let startX = 0, startY = 0, tracking = false;
+  app.addEventListener('touchstart', e=>{
+    if(e.touches.length !== 1) return;
+    // Don't hijack horizontal scrolling inside the filter chip bar.
+    if(e.target.closest('.filterbar, .acc-select-grid, .emoji-row, .logo-row')) { tracking = false; return; }
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY; tracking = true;
+  }, { passive:true });
+  app.addEventListener('touchend', e=>{
+    if(!tracking) return;
+    tracking = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if(Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const idx = order.indexOf(currentView);
+    if(idx === -1) return;
+    const nextIdx = dx < 0 ? idx + 1 : idx - 1;
+    if(nextIdx < 0 || nextIdx >= order.length) return;
+    haptic('light');
+    go(order[nextIdx]);
+  }, { passive:true });
+})();
+
 /* ============ INIT ============ */
 applyHideAmountsUI();
+processRecurring();
 go('home');
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible' && processRecurring()) render();
+});
 
 /* ============ PWA / OFFLINE SUPPORT ============ */
 if('serviceWorker' in navigator){

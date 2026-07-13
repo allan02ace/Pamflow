@@ -1,0 +1,2445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="monetag" content="7ff7a3637666b9543f22d4f0d9a0e09d">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Velocity Log</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e1012">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Velocity Log">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180-maskable.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --bg:#0e1012;
+    --panel:#1a1d21;
+    --panel-hi:#22262b;
+    --bezel:#2c3036;
+    --ink:#e9e5da;
+    --ink-dim:#8a8f95;
+    --ink-faint:#565a5f;
+    --needle:#ff5a36;
+    --needle-glow:rgba(255,90,54,0.35);
+    --gold:#c9a44c;
+    --good:#5fb88a;
+    --danger:#e0604a;
+    --hairline:#2a2e33;
+  }
+  body[data-theme="light"]{
+    --bg:#f3f1ea;
+    --panel:#ffffff;
+    --panel-hi:#f0ede4;
+    --bezel:#e2ddce;
+    --ink:#20242a;
+    --ink-dim:#6b7076;
+    --ink-faint:#9a9fa5;
+    --gold:#a5822f;
+    --good:#3f9068;
+    --danger:#c14a34;
+    --hairline:#e2ddd0;
+  }
+  body[data-theme="light"]{
+    background: radial-gradient(ellipse at 50% -10%, #ffffff 0%, #f3f1ea 55%);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, #1a1d21 0%, var(--bg) 55%);
+    color:var(--ink);
+    transition:background .2s, color .2s;
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    padding:20px 14px 60px;
+  }
+  .app{max-width:480px;margin:0 auto;}
+
+  /* header */
+  .dash-header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:22px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .brand-eyebrow{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.22em;
+    color:var(--ink-faint);
+    text-transform:uppercase;
+    margin-bottom:2px;
+  }
+  .brand-title{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:22px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+  }
+  .unit-toggle{
+    font-family:'Space Mono',monospace;
+    font-size:12px;
+    background:var(--panel-hi);
+    border:1px solid var(--hairline);
+    color:var(--ink-dim);
+    padding:7px 12px;
+    border-radius:20px;
+    cursor:pointer;
+    letter-spacing:0.05em;
+    transition:border-color .15s, color .15s;
+  }
+  .unit-toggle:hover{border-color:var(--ink-faint); color:var(--ink);}
+  .unit-toggle:active{transform:scale(0.97);}
+
+  /* gauge */
+  .gauge-shell{
+    position:relative;
+    background:linear-gradient(180deg,var(--bezel),var(--panel) 40%);
+    border-radius:22px;
+    padding:18px 16px 14px;
+    border:1px solid var(--hairline);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 20px 40px -20px rgba(0,0,0,0.6);
+  }
+  .gauge-face{
+    background:radial-gradient(ellipse at 50% 30%, var(--panel-hi) 0%, var(--panel) 70%);
+    border-radius:16px;
+    padding:6px 4px 0;
+    position:relative;
+    overflow:hidden;
+    width:100%;
+    height:100%;
+  }
+  .gauge-face::after{
+    content:"";
+    position:absolute; inset:0;
+    background:linear-gradient(115deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 30%);
+    pointer-events:none;
+  }
+  .gauge-flip-wrap{
+    position:relative;
+    perspective:1400px;
+  }
+  .gauge-flip-inner{
+    position:relative;
+    width:100%;
+    aspect-ratio:300/190;
+    transform-style:preserve-3d;
+    transition:transform .6s cubic-bezier(.4,.15,.2,1);
+  }
+  .gauge-flip-wrap.flipped .gauge-flip-inner{
+    transform:rotateY(180deg);
+  }
+  .gauge-flip-front,.gauge-flip-back{
+    position:absolute; inset:0;
+    -webkit-backface-visibility:hidden;
+    backface-visibility:hidden;
+  }
+  .gauge-flip-back{
+    transform:rotateY(180deg);
+    border-radius:16px;
+    overflow:hidden;
+    background:var(--panel);
+  }
+  #liveMap{width:100%; height:100%;}
+  .live-map-empty{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:20px;
+    font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-faint);
+    background:var(--panel); z-index:500; pointer-events:none;
+  }
+  .map-flip-btn{
+    position:absolute;
+    top:10px; right:10px;
+    z-index:10;
+    width:34px; height:34px;
+    border-radius:50%;
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(255,255,255,0.15);
+    color:#fff;
+    font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    backdrop-filter:blur(3px);
+  }
+  .map-flip-btn:active{transform:scale(0.92);}
+  svg.dial{display:block; width:100%; height:100%;}
+  .tick-major{stroke:var(--ink-dim); stroke-width:2;}
+  .tick-minor{stroke:var(--ink-faint); stroke-width:1;}
+  .tick-redline{stroke:var(--danger); stroke-width:2;}
+  .tick-num{
+    font-family:'Oswald',sans-serif;
+    font-weight:500;
+    font-size:13px;
+    fill:var(--ink-dim);
+    text-anchor:middle;
+  }
+  .needle{
+    stroke:var(--needle);
+    stroke-width:3;
+    stroke-linecap:round;
+    filter: drop-shadow(0 0 6px var(--needle-glow));
+    transition: transform .25s cubic-bezier(.3,.7,.4,1);
+    transform-origin: 150px 150px;
+  }
+  .hub{fill:var(--panel-hi); stroke:var(--hairline); stroke-width:2;}
+  .hub-dot{fill:var(--needle);}
+
+  .readout{
+    text-align:center;
+    margin-top:-8px;
+    padding-bottom:14px;
+  }
+  .readout-num{
+    font-family:'Space Mono',monospace;
+    font-weight:700;
+    font-size:52px;
+    line-height:1;
+    letter-spacing:-0.01em;
+    font-variant-numeric:tabular-nums;
+  }
+  .readout-unit{
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.2em;
+    color:var(--ink-dim);
+    text-transform:uppercase;
+    margin-top:4px;
+  }
+  .gps-status{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    margin-top:2px;
+  }
+  .gps-dot{width:6px;height:6px;border-radius:50%;background:var(--ink-faint);}
+  .gps-dot.live{background:var(--good); box-shadow:0 0 6px var(--good);}
+  .gps-dot.error{background:var(--danger);}
+  .gps-dot.paused,.gps-dot.weak{background:var(--gold); box-shadow:0 0 6px var(--gold);}
+
+  /* header buttons */
+  .header-btns{display:flex; align-items:center; gap:8px;}
+  .theme-toggle{
+    font-family:'Space Mono',monospace;
+    font-size:14px;
+    background:var(--panel-hi);
+    border:1px solid var(--hairline);
+    color:var(--ink-dim);
+    width:32px; height:32px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:50%;
+    cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  .theme-toggle:hover{border-color:var(--ink-faint); color:var(--ink);}
+  .theme-toggle:active{transform:scale(0.94);}
+  .debug-toggle{
+    font-family:'Space Mono',monospace;
+    font-size:12px;
+    background:var(--panel-hi);
+    border:1px solid var(--hairline);
+    color:var(--ink-faint);
+    width:32px; height:32px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:50%;
+    cursor:pointer;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .debug-toggle:hover{border-color:var(--ink-faint); color:var(--ink);}
+  .debug-toggle.active{background:var(--needle); color:#1a0d08; border-color:var(--needle);}
+
+  .debug-panel{
+    display:none;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px dashed var(--hairline);
+  }
+  .debug-panel.open{display:block;}
+  .debug-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+    padding:2px 0;
+  }
+  .debug-row .debug-label{letter-spacing:0.06em; text-transform:uppercase;}
+  .debug-row .debug-val{color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums;}
+  .debug-row .debug-val.debug-source{color:var(--gold); font-weight:600;}
+  .debug-note{
+    font-size:10px; color:var(--ink-faint); margin-top:6px; line-height:1.5;
+  }
+
+  /* ride note input */
+  .entry-note-wrap{margin-top:6px;}
+  .entry-note-input{
+    width:100%;
+    background:none;
+    border:none;
+    border-bottom:1px dashed var(--hairline);
+    color:var(--ink-dim);
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    padding:3px 0;
+    outline:none;
+  }
+  .entry-note-input::placeholder{color:var(--ink-faint);}
+  .entry-note-input:focus{border-bottom-color:var(--gold); color:var(--ink);}
+
+  /* weekly summary card */
+  .weekly-card{
+    margin-top:16px;
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:16px;
+    padding:14px 16px 16px;
+  }
+  .weekly-card-title{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:13px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-dim);
+    margin-bottom:10px;
+  }
+
+  /* export / import */
+  .data-actions{display:flex; gap:12px;}
+  .data-btn{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+    background:none;border:none;cursor:pointer;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+  }
+  .data-btn:hover{color:var(--gold);}
+  .data-status{
+    font-size:11px; color:var(--ink-faint); text-align:center; margin-top:8px; min-height:14px;
+  }
+
+  /* controls */
+  .controls{
+    margin-top:16px;
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:16px;
+    padding:16px;
+  }
+  .stat-row{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .stat-row.stat-row-5{
+    grid-template-columns:repeat(5,1fr);
+  }
+  .stat-row-5 .stat{padding:8px 2px;}
+  .stat-row-5 .stat-val{font-size:13px;}
+  .btn-row{
+    display:flex;
+    gap:8px;
+  }
+  .pause-btn{
+    flex:0 0 34%;
+    padding:15px 8px;
+    border-radius:12px;
+    border:1px solid var(--hairline);
+    background:var(--panel-hi);
+    color:var(--ink-dim);
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:filter .15s, transform .05s, background .15s, color .15s;
+    display:none;
+  }
+  .pause-btn.visible{display:block;}
+  .pause-btn:active{transform:scale(0.985);}
+  .pause-btn.active{background:var(--gold); color:#1a0d08; border-color:var(--gold);}
+  .btn-row .main-btn{flex:1 1 auto;}
+  .stat{
+    text-align:center;
+    padding:10px 4px;
+    background:var(--panel-hi);
+    border-radius:10px;
+  }
+  .stat-label{
+    font-family:'Space Mono',monospace;
+    font-size:9px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:4px;
+  }
+  .stat-val{
+    font-family:'Space Mono',monospace;
+    font-size:15px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+  }
+  .main-btn{
+    width:100%;
+    padding:15px;
+    border-radius:12px;
+    border:none;
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:filter .15s, transform .05s;
+  }
+  .main-btn:active{transform:scale(0.985);}
+  .main-btn.start{background:var(--needle); color:#1a0d08;}
+  .main-btn.stop{background:var(--ink); color:#14161a;}
+  .main-btn:hover{filter:brightness(1.08);}
+  .hint{
+    font-size:12px;
+    color:var(--ink-faint);
+    text-align:center;
+    margin-top:10px;
+    line-height:1.5;
+  }
+  .hint button{
+    background:none;border:none;color:var(--gold);
+    text-decoration:underline; cursor:pointer; font-size:12px; padding:0;
+    font-family:'Inter',sans-serif;
+  }
+
+  /* history / logbook */
+  .logbook{margin-top:26px;}
+  .logbook-header{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:10px;
+  }
+  .logbook-title{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+  .clear-all{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+    background:none;border:none;cursor:pointer;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+  }
+  .clear-all:hover{color:var(--danger);}
+  .entry{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 10px;
+    border-bottom:1px solid var(--hairline);
+    cursor:pointer;
+  }
+  .entry:last-child{border-bottom:none;}
+  .entry-date{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+    width:52px;
+    line-height:1.3;
+    flex-shrink:0;
+  }
+  .entry-main{flex:1; min-width:0;}
+  .entry-max{
+    font-family:'Space Mono',monospace;
+    font-weight:700;
+    font-size:16px;
+  }
+  .entry-sub{
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-top:2px;
+  }
+  .entry-del{
+    background:none;border:none;color:var(--ink-faint);
+    font-size:16px; cursor:pointer; padding:4px 6px;
+    flex-shrink:0;
+  }
+  .entry-del:hover{color:var(--danger);}
+  .empty-state{
+    text-align:center;
+    padding:30px 10px;
+    color:var(--ink-faint);
+    font-size:13px;
+    line-height:1.6;
+  }
+  .empty-state .glyph{font-size:26px; display:block; margin-bottom:8px; opacity:.6;}
+
+  /* logbook header actions */
+  .logbook-actions{display:flex; align-items:center; gap:14px;}
+
+  /* section tabs */
+  .section-tabs{
+    display:flex; gap:4px; background:var(--panel-hi); border:1px solid var(--hairline);
+    border-radius:10px; padding:3px;
+  }
+  .section-tab{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:11px; letter-spacing:0.06em;
+    text-transform:uppercase; color:var(--ink-faint); background:none; border:none;
+    padding:7px 14px; border-radius:7px; cursor:pointer; transition:background .15s, color .15s;
+  }
+  .section-tab.active{background:var(--needle); color:#1a0d08;}
+  .section-tab:not(.active):hover{color:var(--ink);}
+
+  /* fuel tracker */
+  .fuel-form{
+    display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;
+  }
+  .fuel-field{flex:1; display:flex; flex-direction:column; gap:5px; min-width:100px;}
+  .fuel-field label{
+    font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .fuel-field input{
+    background:var(--panel-hi); border:1px solid var(--hairline); color:var(--ink);
+    font-family:'Space Mono',monospace; font-size:14px; font-weight:700;
+    border-radius:9px; padding:10px 10px; outline:none; width:100%;
+    font-variant-numeric:tabular-nums;
+  }
+  .fuel-field input:focus{border-color:var(--needle);}
+  .fuel-add-btn{
+    align-self:flex-end;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;
+    background:var(--needle); color:#1a0d08; border:none; border-radius:9px;
+    padding:0 16px; height:38px; cursor:pointer; flex-shrink:0;
+  }
+  .fuel-add-btn:hover{filter:brightness(1.08);}
+  .fuel-full-row{
+    display:flex; align-items:center; gap:7px;
+    margin:-2px 0 14px;
+    font-family:'Inter',sans-serif; font-size:12px; color:var(--ink-dim);
+  }
+  .fuel-full-row input[type="checkbox"]{
+    width:15px; height:15px; accent-color:var(--needle); cursor:pointer;
+  }
+  .fuel-full-row label{cursor:pointer;}
+  .tank-card{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel-hi); border:1px solid var(--hairline); border-radius:12px;
+    padding:10px 12px; margin-bottom:14px;
+  }
+  .tank-card-info{font-size:11px; color:var(--ink-dim);}
+  .tank-card-info b{color:var(--ink); font-family:'Space Mono',monospace;}
+  .tank-edit-btn{
+    font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.05em; text-transform:uppercase;
+    background:none; border:1px solid var(--hairline); color:var(--ink-faint);
+    padding:6px 10px; border-radius:20px; cursor:pointer;
+  }
+  .tank-edit-btn:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .fuel-error{
+    font-size:11px; color:var(--danger); margin:-6px 0 12px; display:none;
+  }
+  .fuel-entry{
+    display:flex; align-items:center; gap:12px; padding:12px 10px; border-bottom:1px solid var(--hairline);
+  }
+  .fuel-entry:last-child{border-bottom:none;}
+  .fuel-entry-date{font-family:'Space Mono',monospace; font-size:10px; color:var(--ink-faint); width:52px; line-height:1.3; flex-shrink:0;}
+  .fuel-entry-main{flex:1; min-width:0;}
+  .fuel-entry-odo{font-family:'Space Mono',monospace; font-weight:700; font-size:15px; display:flex; align-items:center; gap:6px;}
+  .fuel-entry-partial-tag{
+    font-family:'Space Mono',monospace; font-size:8px; letter-spacing:0.05em; text-transform:uppercase;
+    color:var(--gold); border:1px solid var(--gold); border-radius:8px; padding:1px 5px;
+  }
+  .fuel-entry-sub{font-size:11px; color:var(--ink-dim); margin-top:2px;}
+  .fuel-consumption{
+    font-family:'Space Mono',monospace; font-weight:700; font-size:15px; color:var(--good);
+    text-align:right; flex-shrink:0;
+  }
+  .fuel-consumption.warn{color:var(--danger);}
+  .fuel-consumption-unit{font-size:9px; color:var(--ink-faint); font-weight:400; display:block; text-align:right;}
+  .fuel-entry-del{
+    background:none;border:none;color:var(--ink-faint);
+    font-size:16px; cursor:pointer; padding:4px 2px 4px 6px; flex-shrink:0;
+  }
+  .fuel-entry-del:hover{color:var(--danger);}
+
+  /* tank setup modal */
+  .tank-modal-body{padding:16px;}
+  .tank-modal-desc{font-size:12px; color:var(--ink-dim); line-height:1.5; margin-bottom:16px;}
+  .tank-modal-field{display:flex; flex-direction:column; gap:6px; margin-bottom:16px;}
+  .tank-modal-field label{
+    font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .tank-modal-field input{
+    background:var(--panel-hi); border:1px solid var(--hairline); color:var(--ink);
+    font-family:'Space Mono',monospace; font-size:18px; font-weight:700;
+    border-radius:10px; padding:12px; outline:none; width:100%;
+  }
+  .tank-modal-field input:focus{border-color:var(--needle);}
+  .tank-modal-btns{display:flex; gap:10px;}
+  .tank-save-btn{
+    flex:1;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
+    background:var(--needle); color:#1a0d08; border:none; border-radius:10px;
+    padding:13px; cursor:pointer;
+  }
+  .tank-skip-btn{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
+    background:none; color:var(--ink-faint); border:1px solid var(--hairline); border-radius:10px;
+    padding:13px 16px; cursor:pointer;
+  }
+  .compare-toggle{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+    background:none;border:none;cursor:pointer;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+  }
+  .compare-toggle.active{color:var(--gold);}
+  .compare-toggle:hover{color:var(--gold);}
+
+  .entry.compare-mode{cursor:pointer;}
+  .entry-check{
+    width:18px; height:18px; border-radius:5px;
+    border:1.5px solid var(--ink-faint);
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; color:transparent;
+  }
+  .entry.selected .entry-check{border-color:var(--needle); background:var(--needle); color:#1a0d08;}
+
+  .compare-bar{
+    position:sticky; bottom:14px;
+    margin-top:12px;
+    background:var(--panel-hi);
+    border:1px solid var(--hairline);
+    border-radius:14px;
+    padding:12px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px;
+    font-size:12px;
+    color:var(--ink-dim);
+  }
+  .compare-bar button{
+    font-family:'Oswald',sans-serif;
+    font-weight:600; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;
+    background:var(--needle); color:#1a0d08; border:none;
+    padding:9px 16px; border-radius:9px; cursor:pointer;
+  }
+  .compare-bar button:disabled{background:var(--hairline); color:var(--ink-faint); cursor:not-allowed;}
+
+  /* modal */
+  .modal-backdrop{
+    position:fixed; inset:0;
+    background:rgba(6,7,8,0.72);
+    backdrop-filter:blur(2px);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:100;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal-sheet{
+    width:100%; max-width:480px;
+    background:var(--panel);
+    border-radius:20px 20px 0 0;
+    border:1px solid var(--hairline);
+    border-bottom:none;
+    max-height:92vh;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+    animation:sheet-up .25s ease-out;
+  }
+  @keyframes sheet-up{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--hairline);
+    flex-shrink:0;
+  }
+  .modal-title{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:15px;
+    letter-spacing:0.05em; text-transform:uppercase;
+  }
+  .modal-close{
+    background:var(--panel-hi); border:1px solid var(--hairline); color:var(--ink-dim);
+    width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .modal-close:hover{color:var(--ink);}
+  .modal-body{overflow-y:auto; padding-bottom:6px;}
+
+  .map-wrap{
+    position:relative;
+    height:280px;
+    background:var(--panel-hi);
+  }
+  #rideMap{width:100%; height:100%;}
+  .leaflet-tile-pane{ filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.92) saturate(0.9); }
+  body[data-theme="light"] .leaflet-tile-pane{ filter:none; }
+  .leaflet-control-attribution{
+    background:rgba(14,16,18,0.75) !important; color:var(--ink-faint) !important;
+    font-size:9px !important;
+  }
+  .leaflet-control-attribution a{color:var(--ink-dim) !important;}
+  .leaflet-control-zoom a{
+    background:var(--panel-hi) !important; color:var(--ink) !important;
+    border-color:var(--hairline) !important;
+  }
+
+  .legend{
+    display:flex; gap:16px; padding:10px 16px; font-size:11px; color:var(--ink-dim);
+    border-bottom:1px solid var(--hairline);
+  }
+  .legend-item{display:flex; align-items:center; gap:6px;}
+  .legend-swatch{width:14px; height:3px; border-radius:2px;}
+
+  .playback-panel{padding:14px 16px 18px;}
+  .playback-stats{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;
+  }
+  .pb-stat{text-align:center; background:var(--panel-hi); border-radius:10px; padding:9px 4px;}
+  .pb-stat-label{font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:3px;}
+  .pb-stat-val{font-family:'Space Mono',monospace; font-size:14px; font-weight:700; font-variant-numeric:tabular-nums;}
+
+  .playback-controls{display:flex; align-items:center; gap:10px;}
+  .play-btn{
+    width:44px; height:44px; border-radius:50%; border:none; flex-shrink:0;
+    background:var(--needle); color:#1a0d08; font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .play-btn:hover{filter:brightness(1.08);}
+  .scrub-wrap{flex:1; display:flex; flex-direction:column; gap:4px;}
+  .scrub-slider{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:4px; border-radius:2px; background:var(--hairline); outline:none;
+  }
+  .scrub-slider::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:14px; height:14px; border-radius:50%; background:var(--needle); cursor:pointer;
+    box-shadow:0 0 0 3px rgba(255,90,54,0.2);
+  }
+  .scrub-times{display:flex; justify-content:space-between; font-family:'Space Mono',monospace; font-size:9px; color:var(--ink-faint);}
+  .speed-select{
+    background:var(--panel-hi); border:1px solid var(--hairline); color:var(--ink-dim);
+    font-family:'Space Mono',monospace; font-size:11px; border-radius:8px; padding:6px 8px;
+    flex-shrink:0; cursor:pointer;
+  }
+
+  .no-path-msg{
+    padding:30px 20px; text-align:center; color:var(--ink-faint); font-size:12px; line-height:1.6;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .needle{transition:none;}
+    .modal-sheet{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="dash-header">
+    <div>
+      <div class="brand-eyebrow">GPS Instrument</div>
+      <div class="brand-title">Velocity Log</div>
+    </div>
+    <div class="header-btns">
+      <button class="debug-toggle" id="debugToggle" title="Speed accuracy diagnostics">🛠</button>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+      <button class="unit-toggle" id="unitToggle">MPH</button>
+    </div>
+  </div>
+
+  <div class="gauge-shell">
+    <div class="gauge-flip-wrap" id="gaugeFlipWrap">
+      <button class="map-flip-btn" id="mapFlipBtn" title="Flip to map">🗺</button>
+      <div class="gauge-flip-inner" id="gaugeFlipInner">
+        <div class="gauge-face gauge-flip-front">
+          <svg class="dial" viewBox="0 0 300 190" id="dialSvg"></svg>
+        </div>
+        <div class="gauge-face gauge-flip-back">
+          <div id="liveMap"></div>
+          <div class="live-map-empty" id="liveMapEmpty">Start tracking to see your route here — waiting for GPS…</div>
+        </div>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="readout-num" id="readoutNum">0</div>
+      <div class="readout-unit" id="readoutUnit">MPH</div>
+      <div class="gps-status"><span class="gps-dot" id="gpsDot"></span><span id="gpsStatusText">Idle</span></div>
+      <div class="debug-panel" id="debugPanel">
+        <div class="debug-row"><span class="debug-label">Device speed</span><span class="debug-val" id="dbgRawSpeed">–</span></div>
+        <div class="debug-row"><span class="debug-label">GPS-calculated speed</span><span class="debug-val" id="dbgCalcSpeed">–</span></div>
+        <div class="debug-row"><span class="debug-label">Shown on dial</span><span class="debug-val debug-source" id="dbgSource">–</span></div>
+        <div class="debug-row"><span class="debug-label">Accuracy (±m)</span><span class="debug-val" id="dbgAccuracy">–</span></div>
+        <div class="debug-row"><span class="debug-label">Fix interval</span><span class="debug-val" id="dbgFixInterval">–</span></div>
+        <div class="debug-row"><span class="debug-label">Distance this fix</span><span class="debug-val" id="dbgFixDist">–</span></div>
+        <div class="debug-note">"Device speed" comes straight from your phone's GPS chip. "GPS-calculated" is worked out from the distance and time between the last two points. A big, consistent gap between them points to the device chip; if both agree but are still off from your odometer, it's more likely mounting/signal quality.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="stat-row stat-row-5">
+      <div class="stat"><div class="stat-label">Distance</div><div class="stat-val" id="statDist">0.0</div></div>
+      <div class="stat"><div class="stat-label">Moving</div><div class="stat-val" id="statTime">0:00</div></div>
+      <div class="stat"><div class="stat-label">Total</div><div class="stat-val" id="statTotalTime">0:00</div></div>
+      <div class="stat"><div class="stat-label">Avg</div><div class="stat-val" id="statAvg">0</div></div>
+      <div class="stat"><div class="stat-label">Max</div><div class="stat-val" id="statMax">0</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="main-btn start" id="sessionBtn">Start Tracking</button>
+      <button class="pause-btn" id="pauseBtn">Pause</button>
+    </div>
+    <div class="hint" id="hintText">Uses your device's GPS. Location is only used while a session is running.</div>
+  </div>
+
+  <div class="weekly-card">
+    <div class="weekly-card-title">This Week</div>
+    <div class="stat-row" style="margin-bottom:0;">
+      <div class="stat"><div class="stat-label">Rides</div><div class="stat-val" id="weekRides">0</div></div>
+      <div class="stat"><div class="stat-label">Distance</div><div class="stat-val" id="weekDist">0.0</div></div>
+      <div class="stat"><div class="stat-label">Time</div><div class="stat-val" id="weekTime">0:00</div></div>
+      <div class="stat"><div class="stat-label">Avg</div><div class="stat-val" id="weekAvg">0</div></div>
+    </div>
+  </div>
+
+  <div class="logbook">
+    <div class="logbook-header">
+      <div class="section-tabs">
+        <button class="section-tab active" id="tabRides">Rides</button>
+        <button class="section-tab" id="tabFuel">Fuel</button>
+      </div>
+      <div class="logbook-actions" id="ridesActions">
+        <button class="compare-toggle" id="compareToggle">Compare</button>
+        <button class="clear-all" id="clearAll">Clear all</button>
+      </div>
+      <div class="logbook-actions" id="fuelActions" style="display:none;">
+        <button class="clear-all" id="fuelClearAll">Clear all</button>
+      </div>
+      <div class="data-actions">
+        <button class="data-btn" id="exportBtn">Export</button>
+        <button class="data-btn" id="importBtn">Import</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none;">
+      </div>
+    </div>
+    <div class="data-status" id="dataStatus"></div>
+
+    <div id="ridesSection">
+      <div id="historyList"></div>
+      <div class="compare-bar" id="compareBar" style="display:none;">
+        <span id="compareBarText">Select 2 rides</span>
+        <button id="compareGoBtn" disabled>View comparison</button>
+      </div>
+    </div>
+
+    <div id="fuelSection" style="display:none;">
+      <div class="tank-card" id="tankCard">
+        <div class="tank-card-info" id="tankCardInfo">Tank capacity not set</div>
+        <button class="tank-edit-btn" id="tankEditBtn">Set tank</button>
+      </div>
+      <div class="fuel-form">
+        <div class="fuel-field">
+          <label for="odoInput">Odometer (km)</label>
+          <input type="number" inputmode="decimal" id="odoInput" placeholder="e.g. 45210">
+        </div>
+        <div class="fuel-field">
+          <label for="litersInput">Liters added</label>
+          <input type="number" inputmode="decimal" id="litersInput" placeholder="e.g. 32.5">
+        </div>
+        <button class="fuel-add-btn" id="fuelAddBtn">Add</button>
+      </div>
+      <div class="fuel-full-row">
+        <input type="checkbox" id="fuelFullCheck" checked>
+        <label for="fuelFullCheck">Filled to full tank</label>
+      </div>
+      <div class="fuel-error" id="fuelError"></div>
+      <div id="fuelList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tank capacity setup modal -->
+<div class="modal-backdrop" id="tankModalBackdrop">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <div class="modal-title" id="tankModalTitle">Tank Capacity</div>
+      <button class="modal-close" id="tankModalClose">✕</button>
+    </div>
+    <div class="modal-body tank-modal-body">
+      <div class="tank-modal-desc">Set your fuel tank's full capacity so fill-up and consumption stats are calculated accurately — especially for partial (not-to-full) fill-ups.</div>
+      <div class="tank-modal-field">
+        <label for="tankCapacityInput">Tank capacity (liters)</label>
+        <input type="number" inputmode="decimal" id="tankCapacityInput" placeholder="e.g. 12.5">
+      </div>
+      <div class="tank-modal-btns">
+        <button class="tank-skip-btn" id="tankSkipBtn">Skip</button>
+        <button class="tank-save-btn" id="tankSaveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ride detail / compare modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">Ride</div>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="map-wrap"><div id="rideMap"></div></div>
+      <div class="legend" id="modalLegend" style="display:none;"></div>
+      <div class="playback-panel" id="playbackPanel">
+        <div class="playback-stats">
+          <div class="pb-stat"><div class="pb-stat-label">Elapsed</div><div class="pb-stat-val" id="pbTime">0:00</div></div>
+          <div class="pb-stat"><div class="pb-stat-label">Speed</div><div class="pb-stat-val" id="pbSpeed">0</div></div>
+          <div class="pb-stat"><div class="pb-stat-label">Distance</div><div class="pb-stat-val" id="pbDist">0.0</div></div>
+        </div>
+        <div class="playback-controls">
+          <button class="play-btn" id="playBtn">▶</button>
+          <div class="scrub-wrap">
+            <input type="range" class="scrub-slider" id="scrubSlider" min="0" max="100" value="0">
+            <div class="scrub-times"><span id="scrubNow">0:00</span><span id="scrubEnd">0:00</span></div>
+          </div>
+          <select class="speed-select" id="speedSelect">
+            <option value="10">10×</option>
+            <option value="30" selected>30×</option>
+            <option value="60">60×</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- persistent storage (IndexedDB) ----------
+// Replaces the Claude-artifact-only `window.storage` API with a real, standalone
+// implementation so data actually persists once this app is installed as a PWA
+// or wrapped into an APK (TWA/WebView storage both support IndexedDB normally).
+// Falls back to localStorage if IndexedDB is unavailable (e.g. some in-app browsers).
+window.storage = (function () {
+  const DB_NAME = 'velocity-log-db';
+  const STORE = 'kv';
+  let dbPromise = null;
+  let useFallback = false;
+
+  function openDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) { useFallback = true; return reject(new Error('no indexedDB')); }
+      try {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => { req.result.createObjectStore(STORE); };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => { useFallback = true; reject(req.error); };
+      } catch (e) { useFallback = true; reject(e); }
+    });
+    return dbPromise;
+  }
+
+  // --- localStorage fallback helpers ---
+  const LS_PREFIX = 'vlog:';
+  function lsGet(key) {
+    const raw = localStorage.getItem(LS_PREFIX + key);
+    return raw === null ? null : { key, value: JSON.parse(raw), shared: false };
+  }
+  function lsSet(key, value) {
+    localStorage.setItem(LS_PREFIX + key, JSON.stringify(value));
+    return { key, value, shared: false };
+  }
+  function lsDelete(key) {
+    localStorage.removeItem(LS_PREFIX + key);
+    return { key, deleted: true, shared: false };
+  }
+  function lsList(prefix) {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(LS_PREFIX)) {
+        const bare = k.slice(LS_PREFIX.length);
+        if (!prefix || bare.startsWith(prefix)) keys.push(bare);
+      }
+    }
+    return { keys, prefix, shared: false };
+  }
+
+  async function get(key) {
+    if (useFallback) return lsGet(key);
+    try {
+      const db = await openDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readonly');
+        const req = tx.objectStore(STORE).get(key);
+        req.onsuccess = () => resolve(req.result !== undefined ? { key, value: req.result, shared: false } : null);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) { return lsGet(key); }
+  }
+
+  async function set(key, value) {
+    if (useFallback) return lsSet(key, value);
+    try {
+      const db = await openDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(value, key);
+        tx.oncomplete = () => resolve({ key, value, shared: false });
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) { return lsSet(key, value); }
+  }
+
+  async function del(key) {
+    if (useFallback) return lsDelete(key);
+    try {
+      const db = await openDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).delete(key);
+        tx.oncomplete = () => resolve({ key, deleted: true, shared: false });
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) { return lsDelete(key); }
+  }
+
+  async function list(prefix) {
+    if (useFallback) return lsList(prefix);
+    try {
+      const db = await openDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readonly');
+        const req = tx.objectStore(STORE).getAllKeys();
+        req.onsuccess = () => {
+          let keys = req.result;
+          if (prefix) keys = keys.filter((k) => String(k).startsWith(prefix));
+          resolve({ keys, prefix, shared: false });
+        };
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) { return lsList(prefix); }
+  }
+
+  return { get, set, delete: del, list };
+})();
+
+(function(){
+  // ---------- state ----------
+  let unit = 'mph'; // 'mph' | 'kmh'
+  let tracking = false;
+  let watchId = null;
+  let demoMode = false;
+  let demoTimer = null;
+
+  let sessionStart = null;
+  let uiTickTimer = null; // keeps Moving/Total timers ticking every second, independent of GPS fix rate
+  let lastPos = null;
+  let distanceM = 0;
+  let maxSpeedMs = 0;
+  let speedSamples = []; // in m/s, time-weighted-ish (simple avg)
+  let currentSpeedMs = 0;
+  let sessionPath = []; // [{lat, lon, t (sec offset), v (m/s), d (meters so far)}]
+  let lastPathSample = null; // {lat, lon, t}
+  let demoLat = 0, demoLon = 0, demoHeading = 0;
+
+  const MPS_TO_MPH = 2.2369362921;
+  const MPS_TO_KMH = 3.6;
+
+  // auto-pause
+  const PAUSE_SPEED_THRESHOLD_MS = 0.9; // ~2mph / ~3.2km/h
+  const PAUSE_DELAY_MS = 3000; // was 8000 — now pauses after 3s stopped instead of 8s
+  let autoPaused = false;   // true when auto-pause has kicked in from low speed
+  let manualPaused = false; // true when the user tapped the Pause button
+  let paused = false;       // effective pause = autoPaused || manualPaused
+  let belowThresholdSince = null;
+  let pauseStartTs = null;
+  let pausedAccumMs = 0;
+
+  // GPS accuracy filtering
+  const MAX_ACCURACY_M = 35;
+
+  // wake lock
+  let wakeLock = null;
+
+  // theme
+  let theme = 'dark';
+
+  // fuel / tank
+  let tankCapacityL = null; // null = not yet set
+
+  // debug / accuracy diagnostics
+  let debugMode = false;
+
+  const els = {
+    unitToggle: document.getElementById('unitToggle'),
+    gaugeFlipWrap: document.getElementById('gaugeFlipWrap'),
+    mapFlipBtn: document.getElementById('mapFlipBtn'),
+    liveMapEmpty: document.getElementById('liveMapEmpty'),
+    debugToggle: document.getElementById('debugToggle'),
+    debugPanel: document.getElementById('debugPanel'),
+    dbgRawSpeed: document.getElementById('dbgRawSpeed'),
+    dbgCalcSpeed: document.getElementById('dbgCalcSpeed'),
+    dbgSource: document.getElementById('dbgSource'),
+    dbgAccuracy: document.getElementById('dbgAccuracy'),
+    dbgFixInterval: document.getElementById('dbgFixInterval'),
+    dbgFixDist: document.getElementById('dbgFixDist'),
+    readoutNum: document.getElementById('readoutNum'),
+    readoutUnit: document.getElementById('readoutUnit'),
+    gpsDot: document.getElementById('gpsDot'),
+    gpsStatusText: document.getElementById('gpsStatusText'),
+    statDist: document.getElementById('statDist'),
+    statTime: document.getElementById('statTime'),
+    statTotalTime: document.getElementById('statTotalTime'),
+    statAvg: document.getElementById('statAvg'),
+    statMax: document.getElementById('statMax'),
+    sessionBtn: document.getElementById('sessionBtn'),
+    pauseBtn: document.getElementById('pauseBtn'),
+    hintText: document.getElementById('hintText'),
+    historyList: document.getElementById('historyList'),
+    clearAll: document.getElementById('clearAll'),
+    compareToggle: document.getElementById('compareToggle'),
+    compareBar: document.getElementById('compareBar'),
+    compareBarText: document.getElementById('compareBarText'),
+    compareGoBtn: document.getElementById('compareGoBtn'),
+    modalBackdrop: document.getElementById('modalBackdrop'),
+    modalTitle: document.getElementById('modalTitle'),
+    modalClose: document.getElementById('modalClose'),
+    modalLegend: document.getElementById('modalLegend'),
+    playbackPanel: document.getElementById('playbackPanel'),
+    playBtn: document.getElementById('playBtn'),
+    scrubSlider: document.getElementById('scrubSlider'),
+    scrubNow: document.getElementById('scrubNow'),
+    scrubEnd: document.getElementById('scrubEnd'),
+    speedSelect: document.getElementById('speedSelect'),
+    pbTime: document.getElementById('pbTime'),
+    pbSpeed: document.getElementById('pbSpeed'),
+    pbDist: document.getElementById('pbDist'),
+    tabRides: document.getElementById('tabRides'),
+    tabFuel: document.getElementById('tabFuel'),
+    ridesSection: document.getElementById('ridesSection'),
+    fuelSection: document.getElementById('fuelSection'),
+    ridesActions: document.getElementById('ridesActions'),
+    fuelActions: document.getElementById('fuelActions'),
+    odoInput: document.getElementById('odoInput'),
+    litersInput: document.getElementById('litersInput'),
+    fuelFullCheck: document.getElementById('fuelFullCheck'),
+    fuelAddBtn: document.getElementById('fuelAddBtn'),
+    fuelError: document.getElementById('fuelError'),
+    fuelList: document.getElementById('fuelList'),
+    fuelClearAll: document.getElementById('fuelClearAll'),
+    tankCard: document.getElementById('tankCard'),
+    tankCardInfo: document.getElementById('tankCardInfo'),
+    tankEditBtn: document.getElementById('tankEditBtn'),
+    tankModalBackdrop: document.getElementById('tankModalBackdrop'),
+    tankModalClose: document.getElementById('tankModalClose'),
+    tankCapacityInput: document.getElementById('tankCapacityInput'),
+    tankSaveBtn: document.getElementById('tankSaveBtn'),
+    tankSkipBtn: document.getElementById('tankSkipBtn'),
+    themeToggle: document.getElementById('themeToggle'),
+    weekRides: document.getElementById('weekRides'),
+    weekDist: document.getElementById('weekDist'),
+    weekTime: document.getElementById('weekTime'),
+    weekAvg: document.getElementById('weekAvg'),
+    exportBtn: document.getElementById('exportBtn'),
+    importBtn: document.getElementById('importBtn'),
+    importFile: document.getElementById('importFile'),
+    dataStatus: document.getElementById('dataStatus'),
+  };
+
+  // ---------- gauge drawing ----------
+  const CX = 150, CY = 150, R = 118;
+  const START_ANGLE = -210; // degrees, gauge sweep
+  const SWEEP = 240;
+
+  function maxScale(){ return unit === 'mph' ? 140 : 220; }
+  function majorStep(){ return unit === 'mph' ? 20 : 20; }
+  function redlineFrom(){ return unit === 'mph' ? 110 : 180; }
+
+  function polar(cx, cy, r, deg){
+    const rad = (deg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function valueToAngle(v){
+    const clamped = Math.max(0, Math.min(maxScale(), v));
+    return START_ANGLE + (clamped / maxScale()) * SWEEP;
+  }
+
+  function buildDial(){
+    const svg = document.getElementById('dialSvg');
+    const max = maxScale();
+    const major = majorStep();
+    const minorPerMajor = 4;
+    const redline = redlineFrom();
+    let ticks = '';
+
+    for(let v = 0; v <= max; v += major / minorPerMajor){
+      const isMajor = Math.round(v * 100) % Math.round(major*100) === 0;
+      const angle = valueToAngle(v);
+      const outer = R;
+      const inner = isMajor ? R - 14 : R - 8;
+      const p1 = polar(CX, CY, outer, angle);
+      const p2 = polar(CX, CY, inner, angle);
+      const cls = v >= redline ? 'tick-redline' : (isMajor ? 'tick-major' : 'tick-minor');
+      ticks += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" class="${cls}"/>`;
+      if(isMajor){
+        const labelPos = polar(CX, CY, R - 28, angle);
+        ticks += `<text x="${labelPos.x.toFixed(1)}" y="${(labelPos.y+4).toFixed(1)}" class="tick-num">${Math.round(v)}</text>`;
+      }
+    }
+
+    // outer rim arc
+    const rimStart = polar(CX, CY, R+6, START_ANGLE);
+    const rimEnd = polar(CX, CY, R+6, START_ANGLE+SWEEP);
+    const rim = `<path d="M ${rimStart.x.toFixed(1)} ${rimStart.y.toFixed(1)} A ${R+6} ${R+6} 0 1 1 ${rimEnd.x.toFixed(1)} ${rimEnd.y.toFixed(1)}" fill="none" stroke="var(--hairline)" stroke-width="1.5"/>`;
+
+    svg.innerHTML = `
+      ${rim}
+      ${ticks}
+      <line id="needleLine" x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY-R+34}" class="needle"/>
+      <circle cx="${CX}" cy="${CY}" r="16" class="hub"/>
+      <circle cx="${CX}" cy="${CY}" r="4" class="hub-dot"/>
+    `;
+    setNeedle(0);
+  }
+
+  function setNeedle(speedInUnit){
+    const line = document.getElementById('needleLine');
+    if(!line) return;
+    const angle = valueToAngle(speedInUnit);
+    line.style.transform = `rotate(${angle}deg)`;
+  }
+
+  // ---------- unit conversion ----------
+  function msToUnit(ms){
+    return unit === 'mph' ? ms * MPS_TO_MPH : ms * MPS_TO_KMH;
+  }
+  function metersToDistUnit(m){
+    return unit === 'mph' ? m / 1609.344 : m / 1000;
+  }
+  function distUnitLabel(){ return unit === 'mph' ? 'mi' : 'km'; }
+
+  function refreshUnitUI(){
+    els.unitToggle.textContent = unit.toUpperCase();
+    els.readoutUnit.textContent = unit === 'mph' ? 'MPH' : 'KM/H';
+    buildDial();
+    updateReadout(currentSpeedMs);
+    updateLiveStats();
+    renderHistory();
+  }
+
+  els.unitToggle.addEventListener('click', ()=>{
+    unit = unit === 'mph' ? 'kmh' : 'mph';
+    refreshUnitUI();
+  });
+
+  // ---------- theme ----------
+  function applyTheme(){
+    document.body.setAttribute('data-theme', theme === 'light' ? 'light' : '');
+    els.themeToggle.textContent = theme === 'light' ? '☀' : '🌙';
+  }
+
+  async function loadTheme(){
+    try{
+      const r = await window.storage.get('theme');
+      if(r && (r.value === 'light' || r.value === 'dark')) theme = r.value;
+    }catch(e){ /* default dark */ }
+    applyTheme();
+  }
+
+  els.themeToggle.addEventListener('click', async ()=>{
+    theme = theme === 'light' ? 'dark' : 'light';
+    applyTheme();
+    try{ await window.storage.set('theme', theme); }catch(e){}
+  });
+
+  // ---------- debug / accuracy diagnostics ----------
+  els.debugToggle.addEventListener('click', ()=>{
+    debugMode = !debugMode;
+    els.debugToggle.classList.toggle('active', debugMode);
+    els.debugPanel.classList.toggle('open', debugMode);
+    if(!debugMode) resetDebugPanel();
+  });
+
+  function resetDebugPanel(){
+    els.dbgRawSpeed.textContent = '–';
+    els.dbgCalcSpeed.textContent = '–';
+    els.dbgSource.textContent = '–';
+    els.dbgAccuracy.textContent = '–';
+    els.dbgFixInterval.textContent = '–';
+    els.dbgFixDist.textContent = '–';
+  }
+
+  function updateDebugPanel(data){
+    if(!debugMode) return;
+    els.dbgRawSpeed.textContent = data.rawSpeed !== null ? `${Math.round(msToUnit(data.rawSpeed))} ${unit}` : 'not reported';
+    els.dbgCalcSpeed.textContent = data.calcSpeed !== null ? `${Math.round(msToUnit(data.calcSpeed))} ${unit}` : '–';
+    els.dbgSource.textContent = data.source;
+    els.dbgAccuracy.textContent = data.accuracy !== null ? `±${data.accuracy}m` : '–';
+    els.dbgFixInterval.textContent = data.dt !== null ? `${data.dt.toFixed(1)}s` : '–';
+    els.dbgFixDist.textContent = data.dist !== null ? `${Math.round(data.dist)}m` : '–';
+  }
+
+  // ---------- readout ----------
+  function updateReadout(ms){
+    const v = msToUnit(ms);
+    els.readoutNum.textContent = Math.round(v);
+    setNeedle(v);
+  }
+
+  function updateLiveStats(){
+    els.statDist.textContent = metersToDistUnit(distanceM).toFixed(1);
+    let elapsed = 0;
+    let totalElapsed = 0;
+    if(sessionStart){
+      const curPausedMs = pausedAccumMs + (paused && pauseStartTs ? (Date.now() - pauseStartTs) : 0);
+      elapsed = Math.max(0, (Date.now() - sessionStart - curPausedMs) / 1000);
+      totalElapsed = Math.max(0, (Date.now() - sessionStart) / 1000);
+    }
+    els.statTime.textContent = formatDuration(elapsed);
+    els.statTotalTime.textContent = formatDuration(totalElapsed);
+    const avgMs = speedSamples.length ? speedSamples.reduce((a,b)=>a+b,0)/speedSamples.length : 0;
+    els.statAvg.textContent = Math.round(msToUnit(avgMs));
+    els.statMax.textContent = Math.round(msToUnit(maxSpeedMs));
+  }
+
+  function formatDuration(sec){
+    sec = Math.max(0, Math.round(sec));
+    const m = Math.floor(sec/60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2,'0')}`;
+  }
+
+  // ---------- pause (auto + manual) ----------
+  // "paused" is the effective pause state = autoPaused || manualPaused.
+  // Distance/avg/max-speed/time accumulation all gate off this single flag,
+  // so it doesn't matter whether the ride paused itself (sustained near-zero
+  // speed, e.g. a red light) or the user tapped the Pause button.
+  function applyEffectivePause(nowTs){
+    const shouldPause = autoPaused || manualPaused;
+    if(shouldPause && !paused){
+      paused = true;
+      pauseStartTs = nowTs;
+    }else if(!shouldPause && paused){
+      paused = false;
+      pausedAccumMs += nowTs - pauseStartTs;
+      pauseStartTs = null;
+    }
+    return paused;
+  }
+
+  // Returns true if the sample should be treated as effectively paused.
+  function checkAutoPause(speedMs, nowTs){
+    if(manualPaused){
+      // don't let speed changes fight a manual pause
+      return applyEffectivePause(nowTs);
+    }
+    if(speedMs < PAUSE_SPEED_THRESHOLD_MS){
+      if(belowThresholdSince === null) belowThresholdSince = nowTs;
+      if(!autoPaused && (nowTs - belowThresholdSince) >= PAUSE_DELAY_MS){
+        autoPaused = true;
+      }
+    }else{
+      belowThresholdSince = null;
+      autoPaused = false;
+    }
+    return applyEffectivePause(nowTs);
+  }
+
+  function toggleManualPause(){
+    if(!tracking) return;
+    manualPaused = !manualPaused;
+    applyEffectivePause(Date.now());
+    els.pauseBtn.textContent = manualPaused ? 'Resume' : 'Pause';
+    els.pauseBtn.classList.toggle('active', manualPaused);
+    setGpsStatus(paused ? 'paused' : 'live', manualPaused
+      ? 'Paused · tap Resume to continue'
+      : (autoPaused ? 'Auto-paused · resume by moving' : 'GPS Live'));
+    updateLiveStats();
+  }
+
+  function resetAutoPause(){
+    autoPaused = false;
+    manualPaused = false;
+    paused = false;
+    belowThresholdSince = null;
+    pauseStartTs = null;
+    pausedAccumMs = 0;
+    els.pauseBtn.textContent = 'Pause';
+    els.pauseBtn.classList.remove('active');
+  }
+
+  // ---------- haversine ----------
+  function haversine(lat1, lon1, lat2, lon2){
+    const R = 6371000;
+    const toRad = d => d * Math.PI/180;
+    const dLat = toRad(lat2-lat1);
+    const dLon = toRad(lon2-lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  // ---------- geolocation ----------
+  function maybeSamplePath(lat, lon, tSec, speedMs){
+    const last = lastPathSample;
+    if(!last){
+      lastPathSample = { lat, lon, t: tSec };
+      sessionPath.push({ lat, lon, t: tSec, v: speedMs, d: Math.round(distanceM) });
+      return;
+    }
+    const dt = tSec - last.t;
+    const d = haversine(last.lat, last.lon, lat, lon);
+    if(dt >= 3 || d >= 15){
+      lastPathSample = { lat, lon, t: tSec };
+      sessionPath.push({ lat, lon, t: Math.round(tSec), v: Math.round(speedMs*10)/10, d: Math.round(distanceM) });
+      if(sessionPath.length > 800){
+        // thin out older points to keep storage bounded on very long rides
+        sessionPath = sessionPath.filter((_, i) => i % 2 === 0);
+      }
+    }
+  }
+
+  function maybeSamplePathForce(lat, lon, tSec, speedMs){
+    lastPathSample = { lat, lon, t: tSec };
+    sessionPath.push({ lat, lon, t: Math.round(tSec), v: Math.round(speedMs*10)/10, d: Math.round(distanceM) });
+  }
+
+  function handlePosition(pos){
+    const acc = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : null;
+
+    // GPS accuracy filtering: skip low-quality fixes entirely rather than let
+    // them corrupt distance/speed — keep lastPos as-is so the next good fix
+    // still measures distance from the last trustworthy point.
+    if(acc !== null && acc > MAX_ACCURACY_M){
+      setGpsStatus('weak', `GPS weak · ±${acc}m`);
+      updateDebugPanel({ rawSpeed: null, calcSpeed: null, source: `skipped (±${acc}m too weak)`, accuracy: acc, dt: null, dist: null });
+      return;
+    }
+
+    const { latitude, longitude, speed } = pos.coords;
+    const now = pos.timestamp || Date.now();
+
+    // Keep the device chip's raw speed and the haversine-derived speed
+    // separate so the debug panel can show both — this is what pins down
+    // whether a speed discrepancy comes from the phone's GPS chip itself
+    // or from position/sampling issues.
+    const rawSpeed = (typeof speed === 'number' && speed !== null && speed >= 0) ? speed : null;
+    let calcSpeed = null;
+    let dt = null, d = null;
+
+    if(lastPos){
+      d = haversine(lastPos.lat, lastPos.lon, latitude, longitude);
+      dt = (now - lastPos.t) / 1000;
+      if(dt > 0){
+        calcSpeed = d / dt;
+      }
+      if(dt > 0 && d < 1000 && !paused){ // ignore GPS jumps, and don't accrue while auto-paused
+        distanceM += d;
+      }
+    }
+    lastPos = { lat: latitude, lon: longitude, t: now };
+
+    const instSpeed = rawSpeed !== null ? rawSpeed : calcSpeed;
+    const source = rawSpeed !== null ? 'device (coords.speed)' : (calcSpeed !== null ? 'calculated (distance÷time)' : 'no data yet');
+
+    updateDebugPanel({ rawSpeed, calcSpeed, source, accuracy: acc, dt, dist: d });
+
+    if(instSpeed !== null){
+      currentSpeedMs = instSpeed;
+      updateReadout(instSpeed);
+      const isPaused = checkAutoPause(instSpeed, now);
+      if(!isPaused){
+        maxSpeedMs = Math.max(maxSpeedMs, instSpeed);
+        speedSamples.push(instSpeed);
+      }
+    }
+
+    setGpsStatus(paused ? 'paused' : 'live', paused
+      ? (manualPaused ? 'Paused · tap Resume to continue' : 'Auto-paused · resume by moving')
+      : (acc !== null ? `GPS Live · ±${acc}m` : 'GPS Live'));
+
+    const tSec = sessionStart ? (now - sessionStart)/1000 : 0;
+    if(!paused){
+      maybeSamplePath(latitude, longitude, tSec, currentSpeedMs);
+      updateLiveMapPosition(latitude, longitude);
+    }
+    updateLiveStats();
+  }
+
+  function handleGeoError(err) {
+    alert(
+        "Code: " + err.code +
+        "\nMessage: " + err.message
+    );
+
+    console.error(err);
+
+    // DON'T stop tracking yet
+    setGpsStatus('error', err.message);
+}
+
+  function setGpsStatus(state, text){
+    els.gpsDot.className = 'gps-dot' + (state ? ' '+state : '');
+    els.gpsStatusText.textContent = text;
+  }
+
+  // ---------- wake lock ----------
+  async function requestWakeLock(){
+    if(!('wakeLock' in navigator)) return;
+    try{
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', ()=>{ wakeLock = null; });
+    }catch(e){
+      // permission denied or unsupported state — fail silently, tracking still works
+      wakeLock = null;
+    }
+  }
+
+  function releaseWakeLock(){
+    if(wakeLock){
+      wakeLock.release().catch(()=>{});
+      wakeLock = null;
+    }
+  }
+
+  document.addEventListener('visibilitychange', ()=>{
+    // wake locks are auto-released when the tab is hidden; re-acquire on return
+    if(document.visibilityState === 'visible' && tracking && !wakeLock){
+      requestWakeLock();
+    }
+  });
+
+  // ---------- demo mode fallback ----------
+  function startDemo(){
+    demoMode = true;
+    tracking = true;
+    sessionStart = Date.now();
+    distanceM = 0; maxSpeedMs = 0; speedSamples = []; currentSpeedMs = 0; lastPos = null;
+    sessionPath = []; lastPathSample = null;
+    resetAutoPause();
+    resetLiveMapTrack();
+    // fake starting point (Golden Gate Park area) so the map has something real to render
+    demoLat = 37.7694; demoLon = -122.4862; demoHeading = Math.random() * Math.PI * 2;
+    setGpsStatus('live', 'Demo mode');
+    els.hintText.textContent = 'Simulating a drive — no real GPS is used.';
+    els.sessionBtn.textContent = 'Stop Tracking';
+    els.sessionBtn.classList.remove('start'); els.sessionBtn.classList.add('stop');
+    els.pauseBtn.classList.add('visible');
+    requestWakeLock();
+
+    let t = 0;
+    demoTimer = setInterval(()=>{
+      t += 1;
+      const simMs = Math.max(0, (Math.sin(t/12) * 0.5 + 0.5) * 26 + Math.random()*2);
+      currentSpeedMs = simMs;
+      updateReadout(simMs);
+      const now = Date.now();
+      const isPaused = checkAutoPause(simMs, now);
+      setGpsStatus(isPaused ? 'paused' : 'live', isPaused
+        ? (manualPaused ? 'Paused · tap Resume to continue' : 'Auto-paused · resume by moving')
+        : 'Demo mode');
+
+      if(!isPaused){
+        maxSpeedMs = Math.max(maxSpeedMs, simMs);
+        speedSamples.push(simMs);
+        distanceM += simMs;
+
+        // gentle random-walk heading so the route curves like real streets
+        demoHeading += (Math.random() - 0.5) * 0.35;
+        const metersMoved = simMs;
+        const dLat = (metersMoved * Math.cos(demoHeading)) / 111320;
+        const dLon = (metersMoved * Math.sin(demoHeading)) / (111320 * Math.cos(demoLat * Math.PI/180));
+        demoLat += dLat;
+        demoLon += dLon;
+
+        maybeSamplePath(demoLat, demoLon, t, simMs);
+        updateLiveMapPosition(demoLat, demoLon);
+      }
+      updateLiveStats();
+    }, 1000);
+  }
+
+  function stopDemo(){
+    if(demoTimer) clearInterval(demoTimer);
+    demoTimer = null;
+    demoMode = false;
+  }
+
+  // ---------- session control ----------
+  function startTracking(){
+    if(!('geolocation' in navigator)){
+      startDemo();
+      return;
+    }
+    tracking = true;
+    sessionStart = Date.now();
+    distanceM = 0; maxSpeedMs = 0; speedSamples = []; currentSpeedMs = 0; lastPos = null;
+    sessionPath = []; lastPathSample = null;
+    resetAutoPause();
+    resetDebugPanel();
+    resetLiveMapTrack();
+    setGpsStatus('', 'Locating…');
+    els.hintText.textContent = 'Keep this screen open while you drive or ride.';
+    els.sessionBtn.textContent = 'Stop Tracking';
+    els.sessionBtn.classList.remove('start'); els.sessionBtn.classList.add('stop');
+    els.pauseBtn.classList.add('visible');
+    requestWakeLock();
+    if(uiTickTimer) clearInterval(uiTickTimer);
+    uiTickTimer = setInterval(updateLiveStats, 1000);
+
+    watchId = navigator.geolocation.watchPosition(handlePosition, handleGeoError, {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+      timeout: 15000
+    });
+  }
+
+  async function stopTracking(shouldSave){
+    tracking = false;
+    if(watchId !== null){
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    if(uiTickTimer){ clearInterval(uiTickTimer); uiTickTimer = null; }
+    const wasDemo = demoMode;
+    if(demoMode) stopDemo();
+    setGpsStatus('', 'Idle');
+    els.sessionBtn.textContent = 'Start Tracking';
+    els.sessionBtn.classList.remove('stop'); els.sessionBtn.classList.add('start');
+    els.pauseBtn.classList.remove('visible');
+    els.hintText.textContent = "Uses your device's GPS. Location is only used while a session is running.";
+
+    if(shouldSave && sessionStart){
+      const duration = (Date.now() - sessionStart) / 1000;
+      if(duration >= 3){
+        // capture a final path point at the true end of the ride
+        if(wasDemo){
+          maybeSamplePathForce(demoLat, demoLon, duration, currentSpeedMs);
+        }else if(lastPos){
+          maybeSamplePathForce(lastPos.lat, lastPos.lon, duration, currentSpeedMs);
+        }
+        const avgMs = speedSamples.length ? speedSamples.reduce((a,b)=>a+b,0)/speedSamples.length : 0;
+        await saveSession({
+          id: Date.now().toString(36),
+          date: Date.now(),
+          durationSec: Math.round(duration),
+          distanceM: Math.round(distanceM),
+          maxMs: maxSpeedMs,
+          avgMs: avgMs,
+          unit: unit,
+          path: sessionPath
+        });
+        els.hintText.textContent = 'Session saved — see it in the logbook below.';
+      }else{
+        els.hintText.textContent = 'Session was too short to save (under 3 seconds).';
+      }
+    }
+    sessionStart = null;
+    lastPos = null;
+    sessionPath = []; lastPathSample = null;
+    resetAutoPause();
+    releaseWakeLock();
+    updateReadout(0);
+  }
+
+  els.sessionBtn.addEventListener('click', ()=>{
+    if(tracking){
+      stopTracking(true);
+    }else{
+      startTracking();
+    }
+  });
+
+  els.pauseBtn.addEventListener('click', toggleManualPause);
+
+  // ---------- storage ----------
+  async function loadHistory(){
+    try{
+      const r = await window.storage.get('sessions', false);
+      return r ? JSON.parse(r.value) : [];
+    }catch(e){
+      return [];
+    }
+  }
+
+  async function saveHistoryArr(arr){
+    try{
+      await window.storage.set('sessions', JSON.stringify(arr), false);
+    }catch(e){
+      console.error('save failed', e);
+    }
+  }
+
+  async function saveSession(entry){
+    const arr = await loadHistory();
+    arr.unshift(entry);
+    if(arr.length > 100) arr.length = 100;
+    await saveHistoryArr(arr);
+    renderHistory();
+  }
+
+  async function deleteSession(id){
+    const arr = await loadHistory();
+    const next = arr.filter(e => e.id !== id);
+    await saveHistoryArr(next);
+    renderHistory();
+  }
+
+  async function updateSessionNote(id, note){
+    const arr = await loadHistory();
+    const entry = arr.find(e => e.id === id);
+    if(!entry) return;
+    entry.note = note;
+    await saveHistoryArr(arr); // no renderHistory() call — avoids yanking focus mid-edit
+  }
+
+  els.clearAll.addEventListener('click', async ()=>{
+    if(!confirm('Clear all saved sessions? This cannot be undone.')) return;
+    await saveHistoryArr([]);
+    renderHistory();
+  });
+
+  function formatDate(ts){
+    const d = new Date(ts);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[d.getMonth()]} ${d.getDate()}`;
+  }
+
+  async function renderWeeklyStats(){
+    const arr = await loadHistory();
+    const weekAgo = Date.now() - 7*24*60*60*1000;
+    const weekRides = arr.filter(e => e.date >= weekAgo);
+    const totalDistM = weekRides.reduce((sum,e) => sum + (e.distanceM || 0), 0);
+    const totalDurSec = weekRides.reduce((sum,e) => sum + (e.durationSec || 0), 0);
+    // duration-weighted average speed so longer rides count more
+    const weightedSpeedSum = weekRides.reduce((sum,e) => sum + (e.avgMs || 0) * (e.durationSec || 0), 0);
+    const avgMs = totalDurSec > 0 ? weightedSpeedSum / totalDurSec : 0;
+
+    els.weekRides.textContent = weekRides.length;
+    els.weekDist.textContent = metersToDistUnit(totalDistM).toFixed(1);
+    els.weekTime.textContent = formatDuration(totalDurSec);
+    els.weekAvg.textContent = Math.round(msToUnit(avgMs));
+  }
+
+  async function renderHistory(){
+    const arr = await loadHistory();
+    if(!arr.length){
+      els.historyList.innerHTML = `<div class="empty-state"><span class="glyph">◎</span>No sessions yet — start tracking to log your first drive.</div>`;
+      els.compareBar.style.display = 'none';
+      renderWeeklyStats();
+      return;
+    }
+    els.historyList.innerHTML = arr.map(e => {
+      const maxV = Math.round(msToUnit(e.maxMs));
+      const avgV = Math.round(msToUnit(e.avgMs));
+      const dist = metersToDistUnit(e.distanceM).toFixed(1);
+      const u = unit === 'mph' ? 'mph' : 'km/h';
+      const dUnit = distUnitLabel();
+      const selected = compareMode && compareSelection.includes(e.id);
+      return `
+        <div class="entry ${compareMode ? 'compare-mode' : ''} ${selected ? 'selected' : ''}" data-id="${e.id}">
+          ${compareMode ? `<div class="entry-check">${selected ? '✓' : ''}</div>` : ''}
+          <div class="entry-date">${formatDate(e.date)}</div>
+          <div class="entry-main">
+            <div class="entry-max">${maxV} <span style="font-size:11px;color:var(--ink-dim);font-weight:400;">${u} max</span></div>
+            <div class="entry-sub">${dist} ${dUnit} · ${formatDuration(e.durationSec)} · avg ${avgV} ${u}${(!e.path || e.path.length < 2) ? ' · no route saved' : ''}</div>
+            ${!compareMode ? `<div class="entry-note-wrap"><input class="entry-note-input" data-id="${e.id}" placeholder="Add a note…" value="${(e.note || '').replace(/"/g,'&quot;')}"></div>` : ''}
+          </div>
+          ${!compareMode ? `<button class="entry-del" data-id="${e.id}" title="Delete">✕</button>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    if(!compareMode){
+      els.historyList.querySelectorAll('.entry-del').forEach(btn=>{
+        btn.addEventListener('click', (ev)=>{
+          ev.stopPropagation();
+          deleteSession(btn.getAttribute('data-id'));
+        });
+      });
+      els.historyList.querySelectorAll('.entry-note-input').forEach(input=>{
+        input.addEventListener('click', (ev)=> ev.stopPropagation());
+        input.addEventListener('change', (ev)=>{
+          ev.stopPropagation();
+          updateSessionNote(input.getAttribute('data-id'), input.value.trim());
+        });
+      });
+      els.historyList.querySelectorAll('.entry').forEach(row=>{
+        row.addEventListener('click', (ev)=>{
+          if(ev.target.classList.contains('entry-note-input')) return;
+          openRideDetail(row.getAttribute('data-id'));
+        });
+      });
+    }else{
+      els.historyList.querySelectorAll('.entry').forEach(row=>{
+        row.addEventListener('click', ()=> toggleCompareSelect(row.getAttribute('data-id')));
+      });
+    }
+
+    updateCompareBar();
+    renderWeeklyStats();
+  }
+
+  // ---------- compare mode selection ----------
+  let compareMode = false;
+  let compareSelection = [];
+
+  function updateCompareBar(){
+    if(!compareMode){ els.compareBar.style.display = 'none'; return; }
+    els.compareBar.style.display = 'flex';
+    els.compareBarText.textContent = compareSelection.length === 0
+      ? 'Select 2 rides to compare'
+      : compareSelection.length === 1
+        ? '1 selected — pick one more'
+        : '2 selected';
+    els.compareGoBtn.disabled = compareSelection.length !== 2;
+  }
+
+  function toggleCompareSelect(id){
+    const idx = compareSelection.indexOf(id);
+    if(idx > -1){
+      compareSelection.splice(idx, 1);
+    }else{
+      if(compareSelection.length >= 2) compareSelection.shift();
+      compareSelection.push(id);
+    }
+    renderHistory();
+  }
+
+  els.compareToggle.addEventListener('click', ()=>{
+    compareMode = !compareMode;
+    compareSelection = [];
+    els.compareToggle.classList.toggle('active', compareMode);
+    renderHistory();
+  });
+
+  els.compareGoBtn.addEventListener('click', async ()=>{
+    if(compareSelection.length !== 2) return;
+    const arr = await loadHistory();
+    const a = arr.find(e => e.id === compareSelection[0]);
+    const b = arr.find(e => e.id === compareSelection[1]);
+    if(a && b) openCompare(a, b);
+  });
+
+  // live stat ticker for time while tracking
+  setInterval(()=>{
+    if(tracking) updateLiveStats();
+  }, 1000);
+
+  // ---------- ride map / playback / compare ----------
+  let rideMap = null;
+  let playbackTimer = null;
+  let playing = false;
+  let activeRides = []; // [{entry, color, marker, poly}]
+  let maxDurationSec = 0;
+
+  function ensureMap(){
+    if(rideMap) return rideMap;
+    rideMap = L.map('rideMap', { zoomControl: true, attributionControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(rideMap);
+    return rideMap;
+  }
+
+  function teardownMap(){
+    if(rideMap){
+      rideMap.remove();
+      rideMap = null;
+    }
+    activeRides = [];
+  }
+
+  // ---------- live map (gauge flip-card) ----------
+  let liveMap = null;
+  let liveMapMarker = null;
+  let liveMapLine = null;
+  let liveMapLatLngs = [];
+  let mapFlipped = false;
+
+  function ensureLiveMap(){
+    if(liveMap) return liveMap;
+    liveMap = L.map('liveMap', {
+      zoomControl: false,
+      attributionControl: true,
+      dragging: true,
+      scrollWheelZoom: false
+    }).setView([14.6488, 120.9822], 14); // default: Caloocan, PH — recentres once a real fix arrives
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(liveMap);
+    liveMapLine = L.polyline([], { color: '#ff6a3d', weight: 4, opacity: 0.9 }).addTo(liveMap);
+    return liveMap;
+  }
+
+  function resetLiveMapTrack(){
+    liveMapLatLngs = [];
+    if(liveMapLine) liveMapLine.setLatLngs([]);
+    if(liveMapMarker){ liveMapMarker.remove(); liveMapMarker = null; }
+    if(els.liveMapEmpty) els.liveMapEmpty.style.display = 'flex';
+  }
+
+  function updateLiveMapPosition(lat, lon){
+    if(!liveMap) return; // don't do map work while the map hasn't been flipped to yet
+    if(els.liveMapEmpty) els.liveMapEmpty.style.display = 'none';
+
+    const ll = [lat, lon];
+    liveMapLatLngs.push(ll);
+    if(liveMapLine) liveMapLine.setLatLngs(liveMapLatLngs);
+
+    if(!liveMapMarker){
+      liveMapMarker = L.circleMarker(ll, {
+        radius: 7, color: '#fff', weight: 2, fillColor: '#ff6a3d', fillOpacity: 1
+      }).addTo(liveMap);
+      liveMap.setView(ll, 17);
+    }else{
+      liveMapMarker.setLatLng(ll);
+      liveMap.panTo(ll);
+    }
+  }
+
+  els.mapFlipBtn.addEventListener('click', ()=>{
+    mapFlipped = !mapFlipped;
+    els.gaugeFlipWrap.classList.toggle('flipped', mapFlipped);
+    els.mapFlipBtn.textContent = mapFlipped ? '⏱' : '🗺';
+    els.mapFlipBtn.title = mapFlipped ? 'Flip to speedometer' : 'Flip to map';
+    if(mapFlipped){
+      ensureLiveMap();
+      // replay any path already captured this session (e.g. flipped mid-ride)
+      if(liveMapLatLngs.length === 0 && sessionPath && sessionPath.length){
+        sessionPath.forEach(p => updateLiveMapPosition(p.lat, p.lon));
+      }
+      // Leaflet needs a nudge once its container becomes visible/sized —
+      // do it right away and again after the flip animation finishes.
+      setTimeout(()=>{ if(liveMap) liveMap.invalidateSize(); }, 50);
+      setTimeout(()=>{ if(liveMap) liveMap.invalidateSize(); }, 650);
+    }
+  });
+
+  function interpolateAt(path, tSec){
+    if(!path || path.length === 0) return null;
+    if(tSec <= path[0].t) return path[0];
+    if(tSec >= path[path.length-1].t) return path[path.length-1];
+    for(let i=0; i<path.length-1; i++){
+      const p1 = path[i], p2 = path[i+1];
+      if(tSec >= p1.t && tSec <= p2.t){
+        const span = (p2.t - p1.t) || 1;
+        const f = (tSec - p1.t) / span;
+        return {
+          lat: p1.lat + (p2.lat - p1.lat) * f,
+          lon: p1.lon + (p2.lon - p1.lon) * f,
+          v: p1.v + (p2.v - p1.v) * f,
+          d: p1.d + (p2.d - p1.d) * f,
+          t: tSec
+        };
+      }
+    }
+    return path[path.length-1];
+  }
+
+  function makeDotIcon(color){
+    return L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #0e1012;box-shadow:0 0 8px ${color};"></div>`,
+      iconSize: [14,14],
+      iconAnchor: [7,7]
+    });
+  }
+
+  function restoreMapWrap(){
+    const wrap = document.querySelector('.map-wrap');
+    if(!document.getElementById('rideMap')){
+      wrap.innerHTML = '<div id="rideMap"></div>';
+    }
+  }
+
+  function closeModal(){
+    stopPlayback();
+    els.modalBackdrop.classList.remove('open');
+    teardownMap();
+  }
+  els.modalClose.addEventListener('click', closeModal);
+  els.modalBackdrop.addEventListener('click', (ev)=>{
+    if(ev.target === els.modalBackdrop) closeModal();
+  });
+
+  function openRideDetail(id){
+    loadHistory().then(arr => {
+      const entry = arr.find(e => e.id === id);
+      if(!entry) return;
+      if(!entry.path || entry.path.length < 2){
+        showNoRoute(entry);
+        return;
+      }
+      els.modalTitle.textContent = entry.note ? entry.note : (formatDate(entry.date) + ' Ride');
+      els.modalLegend.style.display = 'none';
+      els.playbackPanel.style.display = 'block';
+      els.modalBackdrop.classList.add('open');
+
+      requestAnimationFrame(()=>{
+        restoreMapWrap();
+        const map = ensureMap();
+        map.invalidateSize();
+        const color = '#ff5a36';
+        const latlngs = entry.path.map(p => [p.lat, p.lon]);
+        const poly = L.polyline(latlngs, { color, weight: 4, opacity: 0.9 }).addTo(map);
+        L.circleMarker(latlngs[0], { radius:6, color:'#5fb88a', fillColor:'#5fb88a', fillOpacity:1, weight:2 }).addTo(map);
+        L.circleMarker(latlngs[latlngs.length-1], { radius:6, color:'#e0604a', fillColor:'#e0604a', fillOpacity:1, weight:2 }).addTo(map);
+        const marker = L.marker(latlngs[0], { icon: makeDotIcon(color) }).addTo(map);
+        map.fitBounds(poly.getBounds(), { padding: [24,24] });
+
+        activeRides = [{ entry, color, marker, poly }];
+        maxDurationSec = entry.durationSec;
+        setupScrubber();
+      });
+    });
+  }
+
+  function openCompare(a, b){
+    els.modalTitle.textContent = 'Compare Rides';
+    els.modalLegend.style.display = 'flex';
+    els.modalLegend.innerHTML = `
+      <div class="legend-item"><span class="legend-swatch" style="background:#ff5a36;"></span>${formatDate(a.date)}</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#c9a44c; opacity:.55;"></span>${formatDate(b.date)}</div>
+    `;
+    els.playbackPanel.style.display = (a.path && a.path.length>1) || (b.path && b.path.length>1) ? 'block' : 'none';
+    els.modalBackdrop.classList.add('open');
+
+    requestAnimationFrame(()=>{
+      restoreMapWrap();
+      const map = ensureMap();
+      map.invalidateSize();
+      activeRides = [];
+      const bounds = [];
+
+      [[a,'#ff5a36',0.9],[b,'#c9a44c',0.4]].forEach(([entry, color, opacity])=>{
+        if(!entry.path || entry.path.length < 2) return;
+        const latlngs = entry.path.map(p => [p.lat, p.lon]);
+        const poly = L.polyline(latlngs, { color, weight: 4, opacity }).addTo(map);
+        L.circleMarker(latlngs[0], { radius:5, color, fillColor:color, fillOpacity:opacity, weight:2 }).addTo(map);
+        const marker = L.marker(latlngs[0], { icon: makeDotIcon(color) }).addTo(map);
+        activeRides.push({ entry, color, marker, poly });
+        bounds.push(...latlngs);
+      });
+
+      if(bounds.length) map.fitBounds(bounds, { padding: [24,24] });
+      maxDurationSec = Math.max(a.durationSec || 0, b.durationSec || 0);
+      setupScrubber();
+    });
+  }
+
+  function showNoRoute(entry){
+    els.modalTitle.textContent = entry.note ? entry.note : (formatDate(entry.date) + ' Ride');
+    els.modalLegend.style.display = 'none';
+    els.playbackPanel.style.display = 'none';
+    els.modalBackdrop.classList.add('open');
+    requestAnimationFrame(()=>{
+      document.querySelector('.map-wrap').innerHTML = `<div class="no-path-msg">No route was recorded for this ride — this can happen with older sessions or very short trips.</div>`;
+    });
+  }
+
+  function setupScrubber(){
+    els.scrubSlider.min = 0;
+    els.scrubSlider.max = Math.round(maxDurationSec);
+    els.scrubSlider.value = 0;
+    els.scrubEnd.textContent = formatDuration(maxDurationSec);
+    setPlaybackTime(0);
+    playing = false;
+    els.playBtn.textContent = '▶';
+  }
+
+  function setPlaybackTime(tSec){
+    els.scrubSlider.value = Math.round(tSec);
+    els.scrubNow.textContent = formatDuration(tSec);
+
+    let primary = null;
+    activeRides.forEach(ride => {
+      const point = interpolateAt(ride.entry.path, Math.min(tSec, ride.entry.durationSec));
+      if(point){
+        ride.marker.setLatLng([point.lat, point.lon]);
+        if(!primary) primary = point;
+      }
+    });
+
+    if(primary){
+      els.pbTime.textContent = formatDuration(tSec);
+      els.pbSpeed.textContent = Math.round(msToUnit(primary.v || 0));
+      els.pbDist.textContent = metersToDistUnit(primary.d || 0).toFixed(1);
+    }
+  }
+
+  els.scrubSlider.addEventListener('input', ()=>{
+    stopPlayback();
+    setPlaybackTime(Number(els.scrubSlider.value));
+  });
+
+  function startPlayback(){
+    if(activeRides.length === 0) return;
+    playing = true;
+    els.playBtn.textContent = '❚❚';
+    let last = performance.now();
+    function tick(now){
+      if(!playing) return;
+      const dt = (now - last) / 1000;
+      last = now;
+      const speedMult = Number(els.speedSelect.value);
+      let t = Number(els.scrubSlider.value) + dt * speedMult;
+      if(t >= maxDurationSec){
+        t = maxDurationSec;
+        setPlaybackTime(t);
+        stopPlayback();
+        return;
+      }
+      setPlaybackTime(t);
+      playbackTimer = requestAnimationFrame(tick);
+    }
+    playbackTimer = requestAnimationFrame(tick);
+  }
+
+  function stopPlayback(){
+    playing = false;
+    if(playbackTimer) cancelAnimationFrame(playbackTimer);
+    playbackTimer = null;
+    els.playBtn.textContent = '▶';
+  }
+
+  els.playBtn.addEventListener('click', ()=>{
+    if(playing){
+      stopPlayback();
+    }else{
+      if(Number(els.scrubSlider.value) >= maxDurationSec) setPlaybackTime(0);
+      startPlayback();
+    }
+  });
+
+  // ---------- section tabs ----------
+  els.tabRides.addEventListener('click', ()=>{
+    els.tabRides.classList.add('active'); els.tabFuel.classList.remove('active');
+    els.ridesSection.style.display = 'block'; els.fuelSection.style.display = 'none';
+    els.ridesActions.style.display = 'flex'; els.fuelActions.style.display = 'none';
+  });
+  els.tabFuel.addEventListener('click', async ()=>{
+    els.tabFuel.classList.add('active'); els.tabRides.classList.remove('active');
+    els.fuelSection.style.display = 'block'; els.ridesSection.style.display = 'none';
+    els.fuelActions.style.display = 'flex'; els.ridesActions.style.display = 'none';
+    if(compareMode){ compareMode = false; compareSelection = []; els.compareToggle.classList.remove('active'); renderHistory(); }
+    if(tankCapacityL === null){
+      tankCapacityL = await loadTankCapacity();
+    }
+    renderTankCard();
+    if(tankCapacityL === undefined || tankCapacityL === null){
+      openTankModal();
+    }
+    renderFuel();
+  });
+
+  // ---------- tank capacity ----------
+  async function loadTankCapacity(){
+    try{
+      const r = await window.storage.get('tank-capacity', false);
+      return r ? JSON.parse(r.value) : null;
+    }catch(e){ return null; }
+  }
+  async function saveTankCapacity(val){
+    try{ await window.storage.set('tank-capacity', JSON.stringify(val), false); }
+    catch(e){ console.error('tank capacity save failed', e); }
+  }
+
+  function renderTankCard(){
+    if(tankCapacityL){
+      els.tankCardInfo.innerHTML = `Tank capacity: <b>${tankCapacityL}L</b>`;
+      els.tankEditBtn.textContent = 'Edit';
+    }else{
+      els.tankCardInfo.textContent = 'Tank capacity not set — fill-up stats may be less accurate';
+      els.tankEditBtn.textContent = 'Set tank';
+    }
+  }
+
+  function openTankModal(){
+    els.tankCapacityInput.value = tankCapacityL || '';
+    els.tankModalBackdrop.classList.add('open');
+    setTimeout(()=> els.tankCapacityInput.focus(), 50);
+  }
+  function closeTankModal(){
+    els.tankModalBackdrop.classList.remove('open');
+  }
+
+  els.tankEditBtn.addEventListener('click', openTankModal);
+  els.tankModalClose.addEventListener('click', closeTankModal);
+  els.tankSkipBtn.addEventListener('click', async ()=>{
+    // mark as "asked" so we don't nag every time the tab is opened, without saving a bogus capacity
+    if(tankCapacityL === null) await saveTankCapacity(0);
+    tankCapacityL = 0;
+    closeTankModal();
+    renderTankCard();
+  });
+  els.tankSaveBtn.addEventListener('click', async ()=>{
+    const val = parseFloat(els.tankCapacityInput.value);
+    if(!val || val <= 0){
+      els.tankCapacityInput.focus();
+      return;
+    }
+    tankCapacityL = val;
+    await saveTankCapacity(val);
+    closeTankModal();
+    renderTankCard();
+    renderFuel();
+  });
+  els.tankModalBackdrop.addEventListener('click', (ev)=>{
+    if(ev.target === els.tankModalBackdrop) closeTankModal();
+  });
+
+  // ---------- fuel tracker ----------
+  async function loadFuel(){
+    try{
+      const r = await window.storage.get('fuel-entries', false);
+      return r ? JSON.parse(r.value) : [];
+    }catch(e){ return []; }
+  }
+  async function saveFuelArr(arr){
+    try{ await window.storage.set('fuel-entries', JSON.stringify(arr), false); }
+    catch(e){ console.error('fuel save failed', e); }
+  }
+
+  function showFuelError(msg){
+    els.fuelError.textContent = msg;
+    els.fuelError.style.display = msg ? 'block' : 'none';
+  }
+
+  els.fuelAddBtn.addEventListener('click', async ()=>{
+    showFuelError('');
+    const odo = parseFloat(els.odoInput.value);
+    const liters = parseFloat(els.litersInput.value);
+    const full = els.fuelFullCheck.checked;
+    if(!odo || odo <= 0){ showFuelError('Enter a valid odometer reading.'); return; }
+    if(!liters || liters <= 0){ showFuelError('Enter how many liters you added.'); return; }
+    if(tankCapacityL && liters > tankCapacityL * 1.05){
+      showFuelError(`That's more than your ${tankCapacityL}L tank holds — double-check the amount.`);
+      return;
+    }
+
+    const arr = await loadFuel();
+    arr.push({ id: Date.now().toString(36), date: Date.now(), odo, liters, full });
+    arr.sort((a,b)=> a.odo - b.odo);
+    await saveFuelArr(arr);
+    els.odoInput.value = ''; els.litersInput.value = '';
+    els.fuelFullCheck.checked = true;
+    renderFuel();
+  });
+
+  els.fuelClearAll.addEventListener('click', async ()=>{
+    if(!confirm('Clear all fuel entries? This cannot be undone.')) return;
+    await saveFuelArr([]);
+    renderFuel();
+  });
+
+  async function deleteFuelEntry(id){
+    const arr = await loadFuel();
+    await saveFuelArr(arr.filter(e => e.id !== id));
+    renderFuel();
+  }
+
+  // Computes accurate km/L per entry using the standard full-to-full method:
+  // consumption is only meaningful across a span that starts and ends on a
+  // "filled to full" fill-up. Partial fill-ups in between just add their
+  // liters to the running total for that span, without producing their own
+  // km/L number (since we don't yet know how much fuel was actually burned
+  // until the tank is topped off again).
+  function computeFuelConsumption(arr){
+    // arr must be ascending by odo
+    const results = new Map(); // id -> { kmpl, partial }
+    let lastFullOdo = null;
+    let litersSinceLastFull = 0;
+    let sawFirstFull = false;
+
+    arr.forEach(e => {
+      const isFull = e.full !== false; // older entries without the field are treated as full, matching old behavior
+      litersSinceLastFull += e.liters;
+
+      if(!isFull){
+        results.set(e.id, { partial: true });
+        return;
+      }
+
+      if(!sawFirstFull){
+        // first full fill establishes the baseline — no consumption number yet
+        results.set(e.id, { firstFull: true });
+      }else{
+        const dist = e.odo - lastFullOdo;
+        if(dist <= 0){
+          results.set(e.id, { warn: true });
+        }else{
+          results.set(e.id, { kmpl: dist / litersSinceLastFull });
+        }
+      }
+      lastFullOdo = e.odo;
+      litersSinceLastFull = 0;
+      sawFirstFull = true;
+    });
+
+    return results;
+  }
+
+  async function renderFuel(){
+    const arr = await loadFuel(); // ascending by odometer
+    if(!arr.length){
+      els.fuelList.innerHTML = `<div class="empty-state"><span class="glyph">⛽</span>No fill-ups logged yet — add your first one above.</div>`;
+      return;
+    }
+    const consumption = computeFuelConsumption(arr);
+    const rows = [];
+    for(let i = arr.length - 1; i >= 0; i--){
+      const e = arr[i];
+      const isFull = e.full !== false;
+      const res = consumption.get(e.id) || {};
+      let consumptionHtml;
+      if(res.kmpl){
+        consumptionHtml = `<div class="fuel-consumption">${res.kmpl.toFixed(1)}<span class="fuel-consumption-unit">km/L</span></div>`;
+      }else if(res.warn){
+        consumptionHtml = `<div class="fuel-consumption warn">check odo</div>`;
+      }else if(res.partial){
+        consumptionHtml = `<div class="fuel-consumption" style="color:var(--ink-faint); font-weight:400; font-size:11px;">topped up</div>`;
+      }else{
+        consumptionHtml = `<div class="fuel-consumption" style="color:var(--ink-faint); font-weight:400; font-size:11px;">first full</div>`;
+      }
+      rows.push(`
+        <div class="fuel-entry">
+          <div class="fuel-entry-date">${formatDate(e.date)}</div>
+          <div class="fuel-entry-main">
+            <div class="fuel-entry-odo">${e.odo.toLocaleString()} km${!isFull ? '<span class="fuel-entry-partial-tag">partial</span>' : ''}</div>
+            <div class="fuel-entry-sub">${e.liters}L added</div>
+          </div>
+          ${consumptionHtml}
+          <button class="fuel-entry-del" data-id="${e.id}" title="Delete">✕</button>
+        </div>
+      `);
+    }
+    els.fuelList.innerHTML = rows.join('');
+    els.fuelList.querySelectorAll('.fuel-entry-del').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteFuelEntry(btn.getAttribute('data-id')));
+    });
+  }
+
+  // ---------- export / import ----------
+  function showDataStatus(msg, isError){
+    els.dataStatus.textContent = msg;
+    els.dataStatus.style.color = isError ? 'var(--danger)' : 'var(--good)';
+    if(msg){
+      setTimeout(()=>{ if(els.dataStatus.textContent === msg) els.dataStatus.textContent = ''; }, 5000);
+    }
+  }
+
+  els.exportBtn.addEventListener('click', async ()=>{
+    try{
+      const sessions = await loadHistory();
+      const fuel = await loadFuel();
+      const payload = {
+        app: 'velocity-log',
+        version: 1,
+        exportedAt: Date.now(),
+        sessions,
+        fuel
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const d = new Date();
+      const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+      a.href = url;
+      a.download = `velocity-log-export-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showDataStatus(`Exported ${sessions.length} ride(s) and ${fuel.length} fuel entry(ies).`, false);
+    }catch(e){
+      console.error('export failed', e);
+      showDataStatus('Export failed — see console for details.', true);
+    }
+  });
+
+  els.importBtn.addEventListener('click', ()=> els.importFile.click());
+
+  els.importFile.addEventListener('change', async ()=>{
+    const file = els.importFile.files[0];
+    els.importFile.value = ''; // allow re-selecting the same file later
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!data || (!Array.isArray(data.sessions) && !Array.isArray(data.fuel))){
+        showDataStatus('That file doesn\'t look like a Velocity Log export.', true);
+        return;
+      }
+      const incomingSessions = Array.isArray(data.sessions) ? data.sessions : [];
+      const incomingFuel = Array.isArray(data.fuel) ? data.fuel : [];
+
+      const mergeById = (existing, incoming) => {
+        const byId = new Map(existing.map(e => [e.id, e]));
+        incoming.forEach(e => { if(e && e.id) byId.set(e.id, e); }); // imported wins on id collision
+        return Array.from(byId.values());
+      };
+
+      const existingSessions = await loadHistory();
+      const mergedSessions = mergeById(existingSessions, incomingSessions).sort((a,b)=> b.date - a.date);
+      await saveHistoryArr(mergedSessions);
+
+      const existingFuel = await loadFuel();
+      const mergedFuel = mergeById(existingFuel, incomingFuel).sort((a,b)=> a.odo - b.odo);
+      await saveFuelArr(mergedFuel);
+
+      renderHistory();
+      renderFuel();
+      showDataStatus(`Imported — now ${mergedSessions.length} ride(s), ${mergedFuel.length} fuel entry(ies).`, false);
+    }catch(e){
+      console.error('import failed', e);
+      showDataStatus('Import failed — file may be corrupted or invalid JSON.', true);
+    }
+  });
+
+  // ---------- init ----------
+  buildDial();
+  refreshUnitUI();
+  renderHistory();
+  loadTheme();
+
+  // ---------- service worker ----------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

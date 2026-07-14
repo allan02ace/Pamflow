@@ -63,7 +63,7 @@
     font-family:'Inter',sans-serif;
     min-height:100vh;
     -webkit-font-smoothing:antialiased;
-    padding:20px 14px 60px;
+    padding:12px 14px 60px;
   }
   .app{max-width:480px;margin:0 auto;}
 
@@ -72,8 +72,8 @@
     display:flex;
     align-items:baseline;
     justify-content:space-between;
-    margin-bottom:22px;
-    padding-bottom:14px;
+    margin-bottom:14px;
+    padding-bottom:10px;
     border-bottom:1px solid var(--hairline);
   }
   .brand-eyebrow{
@@ -111,7 +111,7 @@
     position:relative;
     background:linear-gradient(180deg,var(--bezel),var(--panel) 40%);
     border-radius:22px;
-    padding:18px 16px 14px;
+    padding:12px 14px 10px;
     border:1px solid var(--hairline);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 20px 40px -20px rgba(0,0,0,0.6);
   }
@@ -203,12 +203,12 @@
   .readout{
     text-align:center;
     margin-top:-8px;
-    padding-bottom:14px;
+    padding-bottom:6px;
   }
   .readout-num{
     font-family:'Space Mono',monospace;
     font-weight:700;
-    font-size:52px;
+    font-size:44px;
     line-height:1;
     letter-spacing:-0.01em;
     font-variant-numeric:tabular-nums;
@@ -430,6 +430,89 @@
     background:none;border:none;color:var(--gold);
     text-decoration:underline; cursor:pointer; font-size:12px; padding:0;
     font-family:'Inter',sans-serif;
+  }
+
+  /* music player */
+  .music-player{
+    margin-top:14px;
+    background:var(--panel-hi);
+    border:1px solid var(--hairline);
+    border-radius:12px;
+    padding:12px 14px 14px;
+  }
+  .music-info{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:8px; margin-bottom:8px;
+  }
+  .music-track-name{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    color:var(--ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .music-track-index{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+    flex:0 0 auto;
+  }
+  .music-seek-row{
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .music-time{
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color:var(--ink-faint);
+    flex:0 0 32px;
+    font-variant-numeric:tabular-nums;
+  }
+  .music-time:last-child{text-align:right;}
+  .music-seek{
+    flex:1 1 auto;
+    -webkit-appearance:none;
+    appearance:none;
+    height:4px;
+    border-radius:2px;
+    background:var(--hairline);
+    outline:none;
+    cursor:pointer;
+  }
+  .music-seek::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:13px; height:13px; border-radius:50%;
+    background:var(--gold); cursor:pointer;
+    box-shadow:0 0 0 3px rgba(201,164,76,0.18);
+  }
+  .music-seek::-moz-range-thumb{
+    width:13px; height:13px; border-radius:50%;
+    background:var(--gold); border:none; cursor:pointer;
+  }
+  .music-btn-row{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  .music-ctrl-btn{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    color:var(--ink-dim);
+    border-radius:50%;
+    width:36px; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px;
+    cursor:pointer;
+    transition:filter .15s, transform .05s, background .15s, color .15s;
+  }
+  .music-ctrl-btn:active{transform:scale(0.94);}
+  .music-ctrl-btn.music-ctrl-play{
+    width:44px; height:44px;
+    background:var(--gold);
+    color:#1a0d08;
+    border-color:var(--gold);
+    font-size:15px;
+  }
+  .music-ctrl-btn.active{color:var(--gold); border-color:var(--gold);}
+  .music-empty-note{
+    font-size:11px; color:var(--ink-faint); text-align:center;
   }
 
   /* history / logbook */
@@ -817,7 +900,27 @@
       <button class="main-btn start" id="sessionBtn">Start Tracking</button>
       <button class="pause-btn" id="pauseBtn">Pause</button>
     </div>
-    <div class="hint" id="hintText">Uses your device's GPS. Location is only used while a session is running.</div>
+    <div class="hint" id="hintText" style="display:none;"></div>
+
+    <div class="music-player" id="musicPlayer">
+      <div class="music-info">
+        <div class="music-track-name" id="musicTrackName">No tracks found</div>
+        <div class="music-track-index" id="musicTrackIndex"></div>
+      </div>
+      <div class="music-seek-row">
+        <span class="music-time" id="musicCurTime">0:00</span>
+        <input type="range" class="music-seek" id="musicSeek" min="0" max="1000" value="0" step="1">
+        <span class="music-time" id="musicDurTime">0:00</span>
+      </div>
+      <div class="music-btn-row">
+        <button class="music-ctrl-btn" id="musicShuffleBtn" title="Shuffle">🔀</button>
+        <button class="music-ctrl-btn" id="musicPrevBtn" title="Previous track">⏮</button>
+        <button class="music-ctrl-btn music-ctrl-play" id="musicPlayBtn" title="Play">▶</button>
+        <button class="music-ctrl-btn" id="musicNextBtn" title="Next track">⏭</button>
+        <button class="music-ctrl-btn" id="musicVolBtn" title="Mute">🔊</button>
+      </div>
+      <audio id="musicAudio" preload="metadata"></audio>
+    </div>
   </div>
 
   <div class="weekly-card">
@@ -1181,6 +1284,18 @@ window.storage = (function () {
     importBtn: document.getElementById('importBtn'),
     importFile: document.getElementById('importFile'),
     dataStatus: document.getElementById('dataStatus'),
+    musicPlayer: document.getElementById('musicPlayer'),
+    musicTrackName: document.getElementById('musicTrackName'),
+    musicTrackIndex: document.getElementById('musicTrackIndex'),
+    musicSeek: document.getElementById('musicSeek'),
+    musicCurTime: document.getElementById('musicCurTime'),
+    musicDurTime: document.getElementById('musicDurTime'),
+    musicShuffleBtn: document.getElementById('musicShuffleBtn'),
+    musicPrevBtn: document.getElementById('musicPrevBtn'),
+    musicPlayBtn: document.getElementById('musicPlayBtn'),
+    musicNextBtn: document.getElementById('musicNextBtn'),
+    musicVolBtn: document.getElementById('musicVolBtn'),
+    musicAudio: document.getElementById('musicAudio'),
   };
 
   // ---------- gauge drawing ----------
@@ -1318,6 +1433,14 @@ window.storage = (function () {
   }
 
   // ---------- readout ----------
+  // Shows a contextual status line below the tracking buttons (e.g. "Session
+  // saved") and hides the element entirely when there's nothing to say,
+  // rather than always showing a static GPS disclaimer.
+  function setHint(text){
+    els.hintText.textContent = text || '';
+    els.hintText.style.display = text ? '' : 'none';
+  }
+
   function updateReadout(ms){
     const v = msToUnit(ms);
     els.readoutNum.textContent = Math.round(v);
@@ -1683,7 +1806,7 @@ if(paused){
     // fake starting point (Golden Gate Park area) so the map has something real to render
     demoLat = 37.7694; demoLon = -122.4862; demoHeading = Math.random() * Math.PI * 2;
     setGpsStatus('live', 'Demo mode');
-    els.hintText.textContent = 'Simulating a drive — no real GPS is used.';
+    setHint('Simulating a drive — no real GPS is used.');
     els.sessionBtn.textContent = 'Stop Tracking';
     els.sessionBtn.classList.remove('start'); els.sessionBtn.classList.add('stop');
     els.pauseBtn.classList.add('visible');
@@ -1741,7 +1864,7 @@ if(paused){
     resetDebugPanel();
     resetLiveMapTrack();
     setGpsStatus('', 'Locating…');
-    els.hintText.textContent = 'Keep this screen open while you drive or ride.';
+    setHint('Keep this screen open while you drive or ride.');
     els.sessionBtn.textContent = 'Stop Tracking';
     els.sessionBtn.classList.remove('start'); els.sessionBtn.classList.add('stop');
     els.pauseBtn.classList.add('visible');
@@ -1769,7 +1892,7 @@ if(paused){
     els.sessionBtn.textContent = 'Start Tracking';
     els.sessionBtn.classList.remove('stop'); els.sessionBtn.classList.add('start');
     els.pauseBtn.classList.remove('visible');
-    els.hintText.textContent = "Uses your device's GPS. Location is only used while a session is running.";
+    setHint('');
 
     if(shouldSave && sessionStart){
       const duration = (Date.now() - sessionStart) / 1000;
@@ -1791,9 +1914,9 @@ if(paused){
           unit: unit,
           path: sessionPath
         });
-        els.hintText.textContent = 'Session saved — see it in the logbook below.';
+        setHint('Session saved — see it in the logbook below.');
       }else{
-        els.hintText.textContent = 'Session was too short to save (under 3 seconds).';
+        setHint('Session was too short to save (under 3 seconds).');
       }
     }
     sessionStart = null;
@@ -2569,11 +2692,147 @@ if(paused){
     }
   });
 
+  // ---------- music player ----------
+  // Add your own tracks here. Drop the actual audio files next to index.html
+  // (e.g. in an "assets/music/" folder you create), then list them below with
+  // a relative path. Because they ship as real files in the app bundle, the
+  // service worker's precache will pick them up on first load and everything
+  // plays back with zero network access after that — same as the rest of the app.
+  // Also add each file path to the precache list in sw.js so it's cached on install.
+  const MUSIC_TRACKS = [
+    // { title: 'Track One', src: 'assets/music/track1.mp3' },
+    // { title: 'Track Two', src: 'assets/music/track2.mp3' },
+  ];
+
+  let musicIdx = 0;
+  let musicShuffleOn = false;
+  let musicOrder = [];
+  let musicSeeking = false;
+
+  function formatMusicTime(sec){
+    if(!isFinite(sec) || sec < 0) sec = 0;
+    const m = Math.floor(sec/60);
+    const s = Math.floor(sec%60);
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function buildMusicOrder(){
+    musicOrder = MUSIC_TRACKS.map((_, i) => i);
+    if(musicShuffleOn){
+      for(let i = musicOrder.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [musicOrder[i], musicOrder[j]] = [musicOrder[j], musicOrder[i]];
+      }
+    }
+  }
+
+  function currentTrackPos(){
+    return musicOrder.indexOf(musicIdx);
+  }
+
+  function loadMusicTrack(i, autoplay){
+    if(!MUSIC_TRACKS.length) return;
+    musicIdx = ((i % MUSIC_TRACKS.length) + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
+    const track = MUSIC_TRACKS[musicIdx];
+    els.musicAudio.src = track.src;
+    els.musicTrackName.textContent = track.title;
+    els.musicTrackIndex.textContent = `${currentTrackPos()+1}/${MUSIC_TRACKS.length}`;
+    els.musicSeek.value = 0;
+    els.musicCurTime.textContent = '0:00';
+    els.musicDurTime.textContent = '0:00';
+    try{ window.storage.set('music-last-track', JSON.stringify({ idx: musicIdx }), false); }catch(e){}
+    if(autoplay){
+      els.musicAudio.play().catch(()=>{});
+    }
+  }
+
+  function setMusicPlayingUI(playing){
+    els.musicPlayBtn.textContent = playing ? '⏸' : '▶';
+    els.musicPlayBtn.title = playing ? 'Pause' : 'Play';
+  }
+
+  function initMusicPlayer(){
+    if(!MUSIC_TRACKS.length){
+      els.musicTrackName.textContent = 'No tracks found';
+      els.musicTrackIndex.textContent = '';
+      [els.musicShuffleBtn, els.musicPrevBtn, els.musicPlayBtn, els.musicNextBtn, els.musicVolBtn].forEach(b => { if(b) b.disabled = true; });
+      els.musicPlayer.style.opacity = '0.5';
+      return;
+    }
+
+    buildMusicOrder();
+
+    (async () => {
+      let startIdx = 0;
+      try{
+        const r = await window.storage.get('music-last-track', false);
+        if(r && r.value){
+          const parsed = JSON.parse(r.value);
+          if(Number.isInteger(parsed.idx) && parsed.idx >= 0 && parsed.idx < MUSIC_TRACKS.length) startIdx = parsed.idx;
+        }
+      }catch(e){}
+      musicIdx = startIdx;
+      loadMusicTrack(musicIdx, false);
+    })();
+
+    els.musicPlayBtn.addEventListener('click', () => {
+      if(els.musicAudio.paused){ els.musicAudio.play().catch(()=>{}); }
+      else{ els.musicAudio.pause(); }
+    });
+    els.musicAudio.addEventListener('play', () => setMusicPlayingUI(true));
+    els.musicAudio.addEventListener('pause', () => setMusicPlayingUI(false));
+
+    els.musicNextBtn.addEventListener('click', () => {
+      const pos = currentTrackPos();
+      loadMusicTrack(musicOrder[(pos + 1) % musicOrder.length], true);
+    });
+    els.musicPrevBtn.addEventListener('click', () => {
+      if(els.musicAudio.currentTime > 3){ els.musicAudio.currentTime = 0; return; }
+      const pos = currentTrackPos();
+      loadMusicTrack(musicOrder[(pos - 1 + musicOrder.length) % musicOrder.length], true);
+    });
+    els.musicAudio.addEventListener('ended', () => {
+      const pos = currentTrackPos();
+      loadMusicTrack(musicOrder[(pos + 1) % musicOrder.length], true);
+    });
+
+    els.musicShuffleBtn.addEventListener('click', () => {
+      musicShuffleOn = !musicShuffleOn;
+      els.musicShuffleBtn.classList.toggle('active', musicShuffleOn);
+      buildMusicOrder();
+    });
+
+    els.musicVolBtn.addEventListener('click', () => {
+      els.musicAudio.muted = !els.musicAudio.muted;
+      els.musicVolBtn.textContent = els.musicAudio.muted ? '🔇' : '🔊';
+      els.musicVolBtn.classList.toggle('active', els.musicAudio.muted);
+    });
+
+    els.musicAudio.addEventListener('loadedmetadata', () => {
+      els.musicDurTime.textContent = formatMusicTime(els.musicAudio.duration);
+      els.musicSeek.max = String(Math.floor(els.musicAudio.duration) || 1000);
+    });
+    els.musicAudio.addEventListener('timeupdate', () => {
+      if(musicSeeking) return;
+      els.musicCurTime.textContent = formatMusicTime(els.musicAudio.currentTime);
+      els.musicSeek.value = String(Math.floor(els.musicAudio.currentTime));
+    });
+    els.musicSeek.addEventListener('input', () => {
+      musicSeeking = true;
+      els.musicCurTime.textContent = formatMusicTime(Number(els.musicSeek.value));
+    });
+    els.musicSeek.addEventListener('change', () => {
+      els.musicAudio.currentTime = Number(els.musicSeek.value);
+      musicSeeking = false;
+    });
+  }
+
   // ---------- init ----------
   buildDial();
   refreshUnitUI();
   renderHistory();
   loadTheme();
+  initMusicPlayer();
 
   // ---------- service worker ----------
   if ('serviceWorker' in navigator) {

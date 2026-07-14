@@ -595,6 +595,12 @@
     line-height:1.3;
     flex-shrink:0;
   }
+  .entry-time{
+    font-size:9px;
+    color:var(--ink-faint);
+    opacity:.75;
+    margin-top:1px;
+  }
   .entry-main{flex:1; min-width:0;}
   .entry-max{
     font-family:'Space Mono',monospace;
@@ -839,6 +845,95 @@
   .modal-close:hover{color:var(--ink);}
   .modal-body{overflow-y:auto; padding-bottom:6px;}
 
+  /* post-ride summary card */
+  .ride-card{
+    position:relative;
+    overflow:hidden;
+    margin:14px 14px 4px;
+    padding:18px 18px 16px;
+    border-radius:18px;
+    background:linear-gradient(160deg, var(--panel-hi) 0%, var(--panel) 75%);
+    border:1px solid var(--hairline);
+    box-shadow: var(--shadow-card);
+    animation:fade-in-up .3s var(--ease-out);
+  }
+  .ride-card::before{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(420px 160px at 100% -10%, var(--needle-glow) 0%, transparent 65%);
+    pointer-events:none;
+  }
+  .ride-card-badge{
+    position:relative;
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:10px;
+  }
+  .ride-card-hero{
+    position:relative;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .ride-card-metric-val{
+    font-family:'Space Mono',monospace;
+    font-weight:700;
+    font-size:46px;
+    line-height:1;
+    letter-spacing:-0.02em;
+    font-variant-numeric:tabular-nums;
+    filter: drop-shadow(0 2px 8px var(--needle-glow));
+  }
+  .ride-card-metric-unit{
+    font-family:'Oswald',sans-serif;
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+  .ride-card-grid{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+  .ride-card-stat{
+    text-align:center;
+    padding:10px 4px;
+    border-radius:12px;
+    background:rgba(0,0,0,0.16);
+    border:1px solid rgba(255,255,255,0.04);
+  }
+  body[data-theme="light"] .ride-card-stat{
+    background:rgba(20,16,8,0.035);
+    border-color:rgba(20,16,8,0.05);
+  }
+  .rc-label{
+    font-family:'Space Mono',monospace;
+    font-size:9px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:4px;
+  }
+  .rc-val{
+    font-family:'Space Mono',monospace;
+    font-weight:700;
+    font-size:16px;
+    font-variant-numeric:tabular-nums;
+  }
+  .rc-val .rc-unit{
+    font-size:9px;
+    font-weight:400;
+    color:var(--ink-dim);
+    text-transform:uppercase;
+  }
+
   .map-wrap{
     position:relative;
     height:280px;
@@ -1078,6 +1173,27 @@
       <button class="modal-close" id="modalClose">✕</button>
     </div>
     <div class="modal-body">
+      <div class="ride-card" id="rideCard" style="display:none;">
+        <div class="ride-card-badge" id="rcBadge">Ride complete</div>
+        <div class="ride-card-hero">
+          <div class="ride-card-metric-val" id="rcDistance">0.0</div>
+          <div class="ride-card-metric-unit" id="rcDistUnit">KM</div>
+        </div>
+        <div class="ride-card-grid">
+          <div class="ride-card-stat">
+            <div class="rc-label">Duration</div>
+            <div class="rc-val" id="rcDuration">0:00</div>
+          </div>
+          <div class="ride-card-stat">
+            <div class="rc-label">Avg Speed</div>
+            <div class="rc-val" id="rcAvg">0 <span class="rc-unit">km/h</span></div>
+          </div>
+          <div class="ride-card-stat">
+            <div class="rc-label">Max Speed</div>
+            <div class="rc-val" id="rcMax">0 <span class="rc-unit">km/h</span></div>
+          </div>
+        </div>
+      </div>
       <div class="map-wrap"><div id="rideMap"></div></div>
       <div class="legend" id="modalLegend" style="display:none;"></div>
       <div class="playback-panel" id="playbackPanel">
@@ -1303,6 +1419,13 @@ window.storage = (function () {
     modalTitle: document.getElementById('modalTitle'),
     modalClose: document.getElementById('modalClose'),
     modalLegend: document.getElementById('modalLegend'),
+    rideCard: document.getElementById('rideCard'),
+    rcBadge: document.getElementById('rcBadge'),
+    rcDistance: document.getElementById('rcDistance'),
+    rcDistUnit: document.getElementById('rcDistUnit'),
+    rcDuration: document.getElementById('rcDuration'),
+    rcAvg: document.getElementById('rcAvg'),
+    rcMax: document.getElementById('rcMax'),
     playbackPanel: document.getElementById('playbackPanel'),
     playBtn: document.getElementById('playBtn'),
     scrubSlider: document.getElementById('scrubSlider'),
@@ -2038,8 +2161,9 @@ if(paused){
           maybeSamplePathForce(lastPos.lat, lastPos.lon, duration, currentSpeedMs);
         }
         const avgMs = weightedAvgSpeed(speedSamples);
+        const savedId = Date.now().toString(36);
         await saveSession({
-          id: Date.now().toString(36),
+          id: savedId,
           date: Date.now(),
           durationSec: Math.round(duration),
           distanceM: Math.round(distanceM),
@@ -2049,6 +2173,7 @@ if(paused){
           path: sessionPath
         });
         setHint('Session saved — see it in the logbook below.');
+        openRideDetail(savedId, true);
       }else{
         setHint('Session was too short to save (under 3 seconds).');
       }
@@ -2124,6 +2249,15 @@ if(paused){
     return `${months[d.getMonth()]} ${d.getDate()}`;
   }
 
+  function formatTime(ts){
+    const d = new Date(ts);
+    let h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if(h === 0) h = 12;
+    return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+  }
+
   async function renderWeeklyStats(){
     const arr = await loadHistory();
     const weekAgo = Date.now() - 7*24*60*60*1000;
@@ -2158,7 +2292,7 @@ if(paused){
       return `
         <div class="entry ${compareMode ? 'compare-mode' : ''} ${selected ? 'selected' : ''}" data-id="${e.id}">
           ${compareMode ? `<div class="entry-check">${selected ? '✓' : ''}</div>` : ''}
-          <div class="entry-date">${formatDate(e.date)}</div>
+          <div class="entry-date">${formatDate(e.date)}<div class="entry-time">${formatTime(e.date)}</div></div>
           <div class="entry-main">
             <div class="entry-max">${maxV} <span style="font-size:11px;color:var(--ink-dim);font-weight:400;">${u} max</span></div>
             <div class="entry-sub">${dist} ${dUnit} · ${formatDuration(e.durationSec)} · avg ${avgV} ${u}${(!e.path || e.path.length < 2) ? ' · no route saved' : ''}</div>
@@ -2384,12 +2518,30 @@ if(paused){
     if(ev.target === els.modalBackdrop) closeModal();
   });
 
-  function openRideDetail(id){
+  function populateRideCard(entry, justFinished){
+    if(!els.rideCard) return;
+    const maxV = Math.round(msToUnit(entry.maxMs));
+    const avgV = Math.round(msToUnit(entry.avgMs));
+    const dist = metersToDistUnit(entry.distanceM).toFixed(1);
+    const dUnit = distUnitLabel();
+    els.rcBadge.textContent = justFinished
+      ? 'Ride complete'
+      : `${formatDate(entry.date)} · ${formatTime(entry.date)}`;
+    els.rcDistance.textContent = dist;
+    els.rcDistUnit.textContent = dUnit.toUpperCase();
+    els.rcDuration.textContent = formatDuration(entry.durationSec);
+    els.rcAvg.innerHTML = `${avgV} <span class="rc-unit">km/h</span>`;
+    els.rcMax.innerHTML = `${maxV} <span class="rc-unit">km/h</span>`;
+    els.rideCard.style.display = 'block';
+  }
+
+  function openRideDetail(id, justFinished){
     loadHistory().then(arr => {
       const entry = arr.find(e => e.id === id);
       if(!entry) return;
+      populateRideCard(entry, justFinished);
       if(!entry.path || entry.path.length < 2){
-        showNoRoute(entry);
+        showNoRoute(entry, justFinished);
         return;
       }
       els.modalTitle.textContent = entry.note ? entry.note : (formatDate(entry.date) + ' Ride');
@@ -2418,6 +2570,7 @@ if(paused){
 
   function openCompare(a, b){
     els.modalTitle.textContent = 'Compare Rides';
+    if(els.rideCard) els.rideCard.style.display = 'none';
     els.modalLegend.style.display = 'flex';
     els.modalLegend.innerHTML = `
       <div class="legend-item"><span class="legend-swatch" style="background:#ff5a36;"></span>${formatDate(a.date)}</div>
@@ -2449,7 +2602,8 @@ if(paused){
     });
   }
 
-  function showNoRoute(entry){
+  function showNoRoute(entry, justFinished){
+    populateRideCard(entry, justFinished);
     els.modalTitle.textContent = entry.note ? entry.note : (formatDate(entry.date) + ' Ride');
     els.modalLegend.style.display = 'none';
     els.playbackPanel.style.display = 'none';

@@ -38,6 +38,12 @@
     --danger:#e0604a;
     --danger-gradient: linear-gradient(135deg, #ef7a61 0%, var(--danger) 55%, #a83a26 100%);
     --hairline:#2a2e33;
+    --ease-out:cubic-bezier(.16,1,.3,1);
+    --ease-spring:cubic-bezier(.34,1.56,.64,1);
+    --ease-standard:cubic-bezier(.4,0,.2,1);
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.28), 0 14px 30px -20px rgba(0,0,0,0.6);
+    --shadow-lift: 0 6px 16px -8px rgba(0,0,0,0.55);
+    --shadow-pop: 0 2px 6px -1px rgba(0,0,0,0.4);
   }
   body[data-theme="light"]{
     --bg:#f3f1ea;
@@ -51,6 +57,9 @@
     --good:#3f9068;
     --danger:#c14a34;
     --hairline:#e2ddd0;
+    --shadow-card: 0 1px 2px rgba(20,16,8,0.06), 0 14px 26px -20px rgba(20,16,8,0.14);
+    --shadow-lift: 0 6px 16px -10px rgba(20,16,8,0.18);
+    --shadow-pop: 0 2px 6px -1px rgba(20,16,8,0.12);
   }
   body[data-theme="light"]{
     background: radial-gradient(1200px 800px at 15% -10%, #ffffff 0%, var(--bg) 45%, #ece7d8 100%);
@@ -61,7 +70,7 @@
     background:
       radial-gradient(1200px 800px at 15% -10%, #24282d 0%, var(--bg) 45%, #08090a 100%);
     color:var(--ink);
-    transition:background .2s, color .2s;
+    transition:background .3s var(--ease-standard), color .3s var(--ease-standard);
     font-family:'Inter',sans-serif;
     min-height:100vh;
     -webkit-font-smoothing:antialiased;
@@ -82,21 +91,21 @@
     font-size:22px;
     line-height:1;
     filter: drop-shadow(0 2px 4px var(--needle-glow));
+    display:flex;
+    align-items:center;
+    gap:6px;
+    cursor:default;
+    transition:opacity .3s var(--ease-standard);
   }
-  .unit-toggle{
+  .weather-temp{
     font-family:'Space Mono',monospace;
-    font-size:12px;
-    background:var(--panel-hi);
-    border:1px solid var(--hairline);
+    font-size:13px;
+    font-weight:700;
     color:var(--ink-dim);
-    padding:7px 12px;
-    border-radius:20px;
-    cursor:pointer;
-    letter-spacing:0.05em;
-    transition:border-color .15s, color .15s;
+    letter-spacing:0.01em;
+    transition:opacity .3s var(--ease-standard);
   }
-  .unit-toggle:hover{border-color:var(--ink-faint); color:var(--ink);}
-  .unit-toggle:active{transform:scale(0.97);}
+  .weather-temp:empty{display:none;}
 
   /* gauge */
   .gauge-shell{
@@ -105,7 +114,8 @@
     border-radius:22px;
     padding:12px 14px 10px;
     border:1px solid var(--hairline);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 20px 40px -20px rgba(0,0,0,0.6);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 2px rgba(0,0,0,0.4), 0 24px 44px -22px rgba(0,0,0,0.65);
+    transition: box-shadow .3s var(--ease-standard);
   }
   .gauge-face{
     background:radial-gradient(ellipse at 50% 30%, var(--panel-hi) 0%, var(--panel) 70%);
@@ -132,7 +142,7 @@
   }
   .gauge-flip-front,.gauge-flip-back{
     position:absolute; inset:0;
-    transition:opacity .32s ease, transform .32s ease;
+    transition:opacity .35s var(--ease-out), transform .35s var(--ease-out);
   }
   .gauge-flip-front{
     opacity:1;
@@ -178,8 +188,9 @@
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
     backdrop-filter:blur(3px);
+    transition:transform .15s var(--ease-spring), background .2s var(--ease-standard);
   }
-  .map-flip-btn:active{transform:scale(0.92);}
+  .map-flip-btn:active{transform:scale(0.88);}
   svg.dial{display:block; width:100%; height:100%;}
   .tick-major{stroke:var(--ink-dim); stroke-width:2;}
   .tick-minor{stroke:var(--ink-faint); stroke-width:1;}
@@ -196,7 +207,7 @@
     stroke-width:3;
     stroke-linecap:round;
     filter: drop-shadow(0 0 6px var(--needle-glow));
-    transition: transform .25s cubic-bezier(.3,.7,.4,1);
+    transition: transform .28s var(--ease-out);
     transform-origin: 150px 150px;
   }
   .hub{fill:var(--panel-hi); stroke:var(--hairline); stroke-width:2;}
@@ -214,7 +225,7 @@
     line-height:1;
     letter-spacing:-0.01em;
     font-variant-numeric:tabular-nums;
-    transition: opacity .25s ease;
+    transition: opacity .3s var(--ease-standard);
   }
   .readout-num.stale{ opacity:.4; }
   .readout-unit{
@@ -237,8 +248,12 @@
     gap:6px;
     margin-top:2px;
   }
-  .gps-dot{width:6px;height:6px;border-radius:50%;background:var(--ink-faint);}
-  .gps-dot.live{background:var(--good); box-shadow:0 0 6px var(--good);}
+  .gps-dot{width:6px;height:6px;border-radius:50%;background:var(--ink-faint); transition:background .2s var(--ease-standard);}
+  .gps-dot.live{background:var(--good); animation:gps-pulse 2.2s var(--ease-standard) infinite;}
+  @keyframes gps-pulse{
+    0%,100%{box-shadow:0 0 5px var(--good);}
+    50%{box-shadow:0 0 11px var(--good), 0 0 2px var(--good);}
+  }
   .gps-dot.error{background:var(--danger-gradient);}
   .gps-dot.paused,.gps-dot.weak{background:var(--gold); box-shadow:0 0 6px var(--gold);}
 
@@ -254,10 +269,10 @@
     display:flex; align-items:center; justify-content:center;
     border-radius:50%;
     cursor:pointer;
-    transition:border-color .15s, color .15s;
+    transition:border-color .2s var(--ease-standard), color .2s var(--ease-standard), transform .15s var(--ease-spring), background .2s var(--ease-standard);
   }
   .theme-toggle:hover{border-color:var(--ink-faint); color:var(--ink);}
-  .theme-toggle:active{transform:scale(0.94);}
+  .theme-toggle:active{transform:scale(0.88) rotate(-8deg);}
   .debug-toggle{
     font-family:'Space Mono',monospace;
     font-size:12px;
@@ -268,9 +283,10 @@
     display:flex; align-items:center; justify-content:center;
     border-radius:50%;
     cursor:pointer;
-    transition:border-color .15s, color .15s, background .15s;
+    transition:border-color .2s var(--ease-standard), color .2s var(--ease-standard), background .2s var(--ease-standard), transform .15s var(--ease-spring);
   }
   .debug-toggle:hover{border-color:var(--ink-faint); color:var(--ink);}
+  .debug-toggle:active{transform:scale(0.88);}
   .debug-toggle.active{background:var(--needle-gradient); color:#1a0d08; border-color:var(--needle);}
 
   .debug-panel{
@@ -279,7 +295,8 @@
     padding-top:10px;
     border-top:1px dashed var(--hairline);
   }
-  .debug-panel.open{display:block;}
+  .debug-panel.open{display:block; animation:fade-in-up .22s var(--ease-out);}
+  @keyframes fade-in-up{from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:translateY(0);}}
   .debug-row{
     display:flex;
     justify-content:space-between;
@@ -308,9 +325,10 @@
     font-size:11px;
     padding:3px 0;
     outline:none;
+    transition:border-color .2s var(--ease-standard), color .2s var(--ease-standard);
   }
-  .entry-note-input::placeholder{color:var(--ink-faint);}
   .entry-note-input:focus{border-bottom-color:var(--gold); color:var(--ink);}
+  .entry-note-input::placeholder{color:var(--ink-faint);}
 
   /* weekly summary card */
   .weekly-card{
@@ -319,6 +337,7 @@
     border:1px solid var(--hairline);
     border-radius:16px;
     padding:14px 16px 16px;
+    box-shadow: var(--shadow-card);
   }
   .weekly-card-title{
     font-family:'Oswald',sans-serif; font-weight:600; font-size:13px;
@@ -335,6 +354,7 @@
     background:none;border:none;cursor:pointer;
     letter-spacing:0.05em;
     text-transform:uppercase;
+    transition:color .2s var(--ease-standard);
   }
   .data-btn:hover{color:var(--gold);}
   .data-status{
@@ -348,6 +368,7 @@
     border:1px solid var(--hairline);
     border-radius:16px;
     padding:16px;
+    box-shadow: var(--shadow-card);
   }
   .stat-row{
     display:grid;
@@ -377,7 +398,7 @@
     letter-spacing:0.06em;
     text-transform:uppercase;
     cursor:pointer;
-    transition:filter .15s, transform .05s, background .15s, color .15s;
+    transition:filter .2s var(--ease-standard), transform .15s var(--ease-spring), background .2s var(--ease-standard), color .2s var(--ease-standard);
     display:none;
   }
   .pause-btn.visible{display:block;}
@@ -415,12 +436,12 @@
     letter-spacing:0.08em;
     text-transform:uppercase;
     cursor:pointer;
-    transition:filter .15s, transform .05s;
+    transition:filter .2s var(--ease-standard), transform .15s var(--ease-spring), box-shadow .2s var(--ease-standard);
   }
   .main-btn:active{transform:scale(0.985);}
   .main-btn.start{background:var(--needle-gradient); color:#1a0d08;}
   .main-btn.stop{background:var(--ink); color:#14161a;}
-  .main-btn:hover{filter:brightness(1.08);}
+  .main-btn:hover{filter:brightness(1.08); transform:translateY(-1px); box-shadow:var(--shadow-lift);}
   .hint{
     font-size:12px;
     color:var(--ink-faint);
@@ -441,6 +462,7 @@
     border:1px solid var(--hairline);
     border-radius:12px;
     padding:12px 14px 14px;
+    box-shadow: var(--shadow-card);
   }
   .music-info{
     display:flex; align-items:baseline; justify-content:space-between;
@@ -479,13 +501,16 @@
     background:var(--hairline);
     outline:none;
     cursor:pointer;
+    transition:background .2s var(--ease-standard);
   }
   .music-seek::-webkit-slider-thumb{
     -webkit-appearance:none;
     width:13px; height:13px; border-radius:50%;
     background:var(--gold); cursor:pointer;
     box-shadow:0 0 0 3px rgba(201,164,76,0.18);
+    transition:box-shadow .2s var(--ease-standard), transform .15s var(--ease-spring);
   }
+  .music-seek::-webkit-slider-thumb:active{transform:scale(1.15); box-shadow:0 0 0 5px rgba(201,164,76,0.22);}
   .music-seek::-moz-range-thumb{
     width:13px; height:13px; border-radius:50%;
     background:var(--gold); border:none; cursor:pointer;
@@ -500,19 +525,28 @@
     border-radius:50%;
     width:36px; height:36px;
     display:flex; align-items:center; justify-content:center;
-    font-size:14px;
     cursor:pointer;
-    transition:filter .15s, transform .05s, background .15s, color .15s;
+    transition:filter .2s var(--ease-standard), transform .15s var(--ease-spring), background .2s var(--ease-standard), color .2s var(--ease-standard);
   }
-  .music-ctrl-btn:active{transform:scale(0.94);}
+  .music-ctrl-btn:active{transform:scale(0.88);}
   .music-ctrl-btn.music-ctrl-play{
     width:44px; height:44px;
     background:var(--gold);
     color:#1a0d08;
     border-color:var(--gold);
-    font-size:15px;
   }
   .music-ctrl-btn.active{color:var(--gold); border-color:var(--gold);}
+  .icon-svg{
+    width:15px; height:15px;
+    display:block;
+  }
+  .icon-svg-play{
+    width:14px; height:14px;
+    margin-left:2px;
+  }
+  .music-ctrl-play .icon-svg{
+    width:17px; height:17px;
+  }
   .music-empty-note{
     font-size:11px; color:var(--ink-faint); text-align:center;
   }
@@ -538,6 +572,7 @@
     background:none;border:none;cursor:pointer;
     letter-spacing:0.05em;
     text-transform:uppercase;
+    transition:color .2s var(--ease-standard);
   }
   .clear-all:hover{color:var(--danger);}
   .entry{
@@ -547,7 +582,10 @@
     padding:12px 10px;
     border-bottom:1px solid var(--hairline);
     cursor:pointer;
+    border-radius:8px;
+    transition:background .2s var(--ease-standard);
   }
+  .entry:hover{background:var(--panel-hi);}
   .entry:last-child{border-bottom:none;}
   .entry-date{
     font-family:'Space Mono',monospace;
@@ -572,8 +610,10 @@
     background:none;border:none;color:var(--ink-faint);
     font-size:16px; cursor:pointer; padding:4px 6px;
     flex-shrink:0;
+    transition:color .2s var(--ease-standard), transform .15s var(--ease-spring);
   }
   .entry-del:hover{color:var(--danger);}
+  .entry-del:active{transform:scale(0.85);}
   .empty-state{
     text-align:center;
     padding:30px 10px;
@@ -594,10 +634,11 @@
   .section-tab{
     font-family:'Oswald',sans-serif; font-weight:600; font-size:11px; letter-spacing:0.06em;
     text-transform:uppercase; color:var(--ink-faint); background:none; border:none;
-    padding:7px 14px; border-radius:7px; cursor:pointer; transition:background .15s, color .15s;
+    padding:7px 14px; border-radius:7px; cursor:pointer; transition:background .2s var(--ease-standard), color .2s var(--ease-standard), transform .15s var(--ease-spring);
   }
   .section-tab.active{background:var(--needle-gradient); color:#1a0d08;}
   .section-tab:not(.active):hover{color:var(--ink);}
+  .section-tab:active{transform:scale(0.94);}
 
   /* fuel tracker */
   .fuel-form{
@@ -613,6 +654,7 @@
     font-family:'Space Mono',monospace; font-size:14px; font-weight:700;
     border-radius:9px; padding:10px 10px; outline:none; width:100%;
     font-variant-numeric:tabular-nums;
+    transition:border-color .2s var(--ease-standard);
   }
   .fuel-field input:focus{border-color:var(--needle);}
   .fuel-add-btn{
@@ -620,8 +662,10 @@
     font-family:'Oswald',sans-serif; font-weight:600; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;
     background:var(--needle-gradient); color:#1a0d08; border:none; border-radius:9px;
     padding:0 16px; height:38px; cursor:pointer; flex-shrink:0;
+    transition:filter .2s var(--ease-standard), transform .15s var(--ease-spring), box-shadow .2s var(--ease-standard);
   }
-  .fuel-add-btn:hover{filter:brightness(1.08);}
+  .fuel-add-btn:hover{filter:brightness(1.08); transform:translateY(-1px); box-shadow:var(--shadow-lift);}
+  .fuel-add-btn:active{transform:scale(0.97);}
   .fuel-full-row{
     display:flex; align-items:center; gap:7px;
     margin:-2px 0 14px;
@@ -635,6 +679,7 @@
     display:flex; align-items:center; justify-content:space-between;
     background:var(--panel-hi); border:1px solid var(--hairline); border-radius:12px;
     padding:10px 12px; margin-bottom:14px;
+    box-shadow: var(--shadow-card);
   }
   .tank-card-info{font-size:11px; color:var(--ink-dim);}
   .tank-card-info b{color:var(--ink); font-family:'Space Mono',monospace;}
@@ -642,10 +687,12 @@
     font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.05em; text-transform:uppercase;
     background:none; border:1px solid var(--hairline); color:var(--ink-faint);
     padding:6px 10px; border-radius:20px; cursor:pointer;
+    transition:color .2s var(--ease-standard), border-color .2s var(--ease-standard);
   }
   .tank-edit-btn:hover{color:var(--ink); border-color:var(--ink-faint);}
   .fuel-error{
     font-size:11px; color:var(--danger); margin:-6px 0 12px; display:none;
+    animation:fade-in-up .2s var(--ease-out);
   }
   .fuel-entry{
     display:flex; align-items:center; gap:12px; padding:12px 10px; border-bottom:1px solid var(--hairline);
@@ -691,12 +738,17 @@
     font-family:'Oswald',sans-serif; font-weight:600; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
     background:var(--needle-gradient); color:#1a0d08; border:none; border-radius:10px;
     padding:13px; cursor:pointer;
+    transition:filter .2s var(--ease-standard), transform .15s var(--ease-spring);
   }
+  .tank-save-btn:hover{filter:brightness(1.08);}
+  .tank-save-btn:active{transform:scale(0.97);}
   .tank-skip-btn{
     font-family:'Oswald',sans-serif; font-weight:600; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
     background:none; color:var(--ink-faint); border:1px solid var(--hairline); border-radius:10px;
     padding:13px 16px; cursor:pointer;
+    transition:color .2s var(--ease-standard), border-color .2s var(--ease-standard), transform .15s var(--ease-spring);
   }
+  .tank-skip-btn:active{transform:scale(0.97);}
   .compare-toggle{
     font-family:'Space Mono',monospace;
     font-size:10px;
@@ -704,6 +756,7 @@
     background:none;border:none;cursor:pointer;
     letter-spacing:0.05em;
     text-transform:uppercase;
+    transition:color .2s var(--ease-standard);
   }
   .compare-toggle.active{color:var(--gold);}
   .compare-toggle:hover{color:var(--gold);}
@@ -715,8 +768,9 @@
     flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
     font-size:11px; color:transparent;
+    transition:border-color .2s var(--ease-standard), background .2s var(--ease-standard), transform .15s var(--ease-spring);
   }
-  .entry.selected .entry-check{border-color:var(--needle); background:var(--needle-gradient); color:#1a0d08;}
+  .entry.selected .entry-check{border-color:var(--needle); background:var(--needle-gradient); color:#1a0d08; transform:scale(1.05);}
 
   .compare-bar{
     position:sticky; bottom:14px;
@@ -729,13 +783,17 @@
     gap:10px;
     font-size:12px;
     color:var(--ink-dim);
+    box-shadow: var(--shadow-lift);
+    animation:fade-in-up .25s var(--ease-out);
   }
   .compare-bar button{
     font-family:'Oswald',sans-serif;
     font-weight:600; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;
     background:var(--needle-gradient); color:#1a0d08; border:none;
     padding:9px 16px; border-radius:9px; cursor:pointer;
+    transition:filter .2s var(--ease-standard), transform .15s var(--ease-spring), background .2s var(--ease-standard), color .2s var(--ease-standard);
   }
+  .compare-bar button:active:not(:disabled){transform:scale(0.95);}
   .compare-bar button:disabled{background:var(--hairline); color:var(--ink-faint); cursor:not-allowed;}
 
   /* modal */
@@ -748,7 +806,8 @@
     justify-content:center;
     z-index:100;
   }
-  .modal-backdrop.open{display:flex;}
+  .modal-backdrop.open{display:flex; animation:backdrop-fade .25s var(--ease-standard);}
+  @keyframes backdrop-fade{from{opacity:0;} to{opacity:1;}}
   .modal-sheet{
     width:100%; max-width:480px;
     background:var(--panel);
@@ -758,9 +817,10 @@
     max-height:92vh;
     display:flex; flex-direction:column;
     overflow:hidden;
-    animation:sheet-up .25s ease-out;
+    box-shadow: 0 -8px 30px -10px rgba(0,0,0,0.5);
+    animation:sheet-up .32s var(--ease-out);
   }
-  @keyframes sheet-up{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  @keyframes sheet-up{from{transform:translateY(28px); opacity:0;} to{transform:translateY(0); opacity:1;}}
   .modal-head{
     display:flex; align-items:center; justify-content:space-between;
     padding:14px 16px 10px;
@@ -850,11 +910,12 @@
 <div class="app">
 
   <div class="dash-header">
-    <div class="dash-mark">🏍️</div>
+    <div class="dash-mark" id="weatherMark" title="Local weather">
+      <span id="weatherIcon">⛅</span><span class="weather-temp" id="weatherTemp"></span>
+    </div>
     <div class="header-btns">
       <button class="debug-toggle" id="debugToggle" title="Speed accuracy diagnostics">🛠</button>
       <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
-      <button class="unit-toggle" id="unitToggle">MPH</button>
     </div>
   </div>
 
@@ -873,7 +934,7 @@
     </div>
     <div class="readout">
       <div class="readout-num" id="readoutNum">0</div>
-      <div class="readout-unit" id="readoutUnit">MPH</div>
+      <div class="readout-unit" id="readoutUnit">KM/H</div>
       <div class="gps-status"><span class="gps-dot" id="gpsDot"></span><span id="gpsStatusText">Idle</span></div>
       <div class="debug-panel" id="debugPanel">
         <div class="debug-row"><span class="debug-label">Device speed</span><span class="debug-val" id="dbgRawSpeed">–</span></div>
@@ -912,11 +973,11 @@
         <span class="music-time" id="musicDurTime">0:00</span>
       </div>
       <div class="music-btn-row">
-        <button class="music-ctrl-btn" id="musicShuffleBtn" title="Shuffle">🔀</button>
-        <button class="music-ctrl-btn" id="musicPrevBtn" title="Previous track">⏮</button>
-        <button class="music-ctrl-btn music-ctrl-play" id="musicPlayBtn" title="Play">▶</button>
-        <button class="music-ctrl-btn" id="musicNextBtn" title="Next track">⏭</button>
-        <button class="music-ctrl-btn" id="musicVolBtn" title="Mute">🔊</button>
+        <button class="music-ctrl-btn" id="musicShuffleBtn" title="Shuffle"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></button>
+        <button class="music-ctrl-btn" id="musicPrevBtn" title="Previous track"><svg class="icon-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M6.5 4h-2v12h2V4z"/><path d="M16 4l-8.5 6L16 16V4z"/></svg></button>
+        <button class="music-ctrl-btn music-ctrl-play" id="musicPlayBtn" title="Play"><svg class="icon-svg icon-svg-play" viewBox="0 0 20 20" fill="currentColor"><path d="M6 4l10 6-10 6V4z"/></svg></button>
+        <button class="music-ctrl-btn" id="musicNextBtn" title="Next track"><svg class="icon-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4l8.5 6L4 16V4z"/><path d="M13.5 4h2v12h-2V4z"/></svg></button>
+        <button class="music-ctrl-btn" id="musicVolBtn" title="Mute"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>
       </div>
       <audio id="musicAudio" preload="metadata"></audio>
     </div>
@@ -1155,7 +1216,7 @@ window.storage = (function () {
 
 (function(){
   // ---------- state ----------
-  let unit = 'mph'; // 'mph' | 'kmh'
+  const unit = 'kmh'; // km/h only — MPH toggle removed
   let tracking = false;
   let watchId = null;
   let demoMode = false;
@@ -1173,7 +1234,6 @@ window.storage = (function () {
   let lastPathSample = null; // {lat, lon, t}
   let demoLat = 0, demoLon = 0, demoHeading = 0;
 
-  const MPS_TO_MPH = 2.2369362921;
   const MPS_TO_KMH = 3.6;
 
   // auto-pause
@@ -1210,7 +1270,6 @@ window.storage = (function () {
   let debugMode = false;
 
   const els = {
-    unitToggle: document.getElementById('unitToggle'),
     gaugeFlipWrap: document.getElementById('gaugeFlipWrap'),
     mapFlipBtn: document.getElementById('mapFlipBtn'),
     liveMapEmpty: document.getElementById('liveMapEmpty'),
@@ -1275,6 +1334,9 @@ window.storage = (function () {
     tankSaveBtn: document.getElementById('tankSaveBtn'),
     tankSkipBtn: document.getElementById('tankSkipBtn'),
     themeToggle: document.getElementById('themeToggle'),
+    weatherMark: document.getElementById('weatherMark'),
+    weatherIcon: document.getElementById('weatherIcon'),
+    weatherTemp: document.getElementById('weatherTemp'),
     weekRides: document.getElementById('weekRides'),
     weekDist: document.getElementById('weekDist'),
     weekTime: document.getElementById('weekTime'),
@@ -1302,9 +1364,9 @@ window.storage = (function () {
   const START_ANGLE = -210; // degrees, gauge sweep
   const SWEEP = 240;
 
-  function maxScale(){ return unit === 'mph' ? 140 : 220; }
-  function majorStep(){ return unit === 'mph' ? 20 : 20; }
-  function redlineFrom(){ return unit === 'mph' ? 110 : 180; }
+  function maxScale(){ return 100; }
+  function majorStep(){ return 10; }
+  function redlineFrom(){ return 90; }
 
   function polar(cx, cy, r, deg){
     const rad = (deg - 90) * Math.PI / 180;
@@ -1363,26 +1425,20 @@ window.storage = (function () {
 
   // ---------- unit conversion ----------
   function msToUnit(ms){
-    return unit === 'mph' ? ms * MPS_TO_MPH : ms * MPS_TO_KMH;
+    return ms * MPS_TO_KMH;
   }
   function metersToDistUnit(m){
-    return unit === 'mph' ? m / 1609.344 : m / 1000;
+    return m / 1000;
   }
-  function distUnitLabel(){ return unit === 'mph' ? 'mi' : 'km'; }
+  function distUnitLabel(){ return 'km'; }
 
   function refreshUnitUI(){
-    els.unitToggle.textContent = unit.toUpperCase();
-    els.readoutUnit.textContent = unit === 'mph' ? 'MPH' : 'KM/H';
+    els.readoutUnit.textContent = 'KM/H';
     buildDial();
     updateReadout(currentSpeedMs);
     updateLiveStats();
     renderHistory();
   }
-
-  els.unitToggle.addEventListener('click', ()=>{
-    unit = unit === 'mph' ? 'kmh' : 'mph';
-    refreshUnitUI();
-  });
 
   // ---------- theme ----------
   function applyTheme(){
@@ -1565,6 +1621,85 @@ window.storage = (function () {
     return sumW > 0 ? sumWV / sumW : samples.reduce((a,b)=>a+b.v,0)/samples.length;
   }
 
+
+  // ---------- live weather ----------
+  const WEATHER_REFRESH_MS = 15 * 60 * 1000; // refresh every 15 min
+  const WEATHER_CACHE_KEY = 'weather-last';
+
+  function weatherIconFor(code, isDay){
+    // Open-Meteo WMO weather codes -> emoji
+    if(code === 0) return isDay ? '☀️' : '🌙';
+    if(code === 1) return isDay ? '🌤' : '🌙';
+    if(code === 2) return '⛅';
+    if(code === 3) return '☁️';
+    if(code === 45 || code === 48) return '🌫';
+    if(code >= 51 && code <= 57) return '🌦';
+    if(code >= 61 && code <= 67) return '🌧';
+    if(code >= 71 && code <= 77) return '🌨';
+    if(code >= 80 && code <= 82) return '🌧';
+    if(code === 85 || code === 86) return '🌨';
+    if(code >= 95 && code <= 99) return '⛈';
+    return '⛅';
+  }
+
+  function applyWeather(data){
+    if(!data || !els.weatherIcon || !els.weatherMark) return;
+    const cw = data.current_weather;
+    if(!cw) return;
+    els.weatherMark.style.opacity = '0';
+    setTimeout(() => {
+      els.weatherIcon.textContent = weatherIconFor(cw.weathercode, cw.is_day === 1);
+      if(els.weatherTemp){
+        els.weatherTemp.textContent = `${Math.round(cw.temperature)}°`;
+      }
+      els.weatherMark.title = `Local weather: ${Math.round(cw.temperature)}°C`;
+      els.weatherMark.style.opacity = '1';
+    }, 180);
+  }
+
+  async function fetchWeather(lat, lon){
+    try{
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=celsius`;
+      const res = await fetch(url);
+      if(!res.ok) return;
+      const data = await res.json();
+      applyWeather(data);
+      try{
+        window.storage.set(WEATHER_CACHE_KEY, JSON.stringify({ data, lat, lon, ts: Date.now() }), false);
+      }catch(e){}
+    }catch(e){
+      // silently ignore — keep whatever was last shown
+    }
+  }
+
+  function getPositionOnce(){
+    return new Promise((resolve, reject) => {
+      if(!('geolocation' in navigator)){ reject(new Error('no geolocation')); return; }
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve(pos),
+        err => reject(err),
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 }
+      );
+    });
+  }
+
+  async function initWeather(){
+    // Show cached weather immediately if we have something recent, then refresh.
+    try{
+      const cached = await window.storage.get(WEATHER_CACHE_KEY, false);
+      if(cached && cached.value){
+        const parsed = JSON.parse(cached.value);
+        if(parsed && parsed.data) applyWeather(parsed.data);
+      }
+    }catch(e){}
+
+    try{
+      const pos = await getPositionOnce();
+      await fetchWeather(pos.coords.latitude, pos.coords.longitude);
+    }catch(e){
+      // Location unavailable/denied — leave cached or default icon in place.
+    }
+  }
 
   // ---------- geolocation ----------
   function maybeSamplePath(lat, lon, tSec, speedMs){
@@ -2017,7 +2152,7 @@ if(paused){
       const maxV = Math.round(msToUnit(e.maxMs));
       const avgV = Math.round(msToUnit(e.avgMs));
       const dist = metersToDistUnit(e.distanceM).toFixed(1);
-      const u = unit === 'mph' ? 'mph' : 'km/h';
+      const u = 'km/h';
       const dUnit = distUnitLabel();
       const selected = compareMode && compareSelection.includes(e.id);
       return `
@@ -2800,8 +2935,13 @@ if(paused){
     }catch(e){}
   }
 
+  const ICON_PLAY = '<svg class="icon-svg icon-svg-play" viewBox="0 0 20 20" fill="currentColor"><path d="M6 4l10 6-10 6V4z"/></svg>';
+  const ICON_PAUSE = '<svg class="icon-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 4h3v12h-3zM11.5 4h3v12h-3z"/></svg>';
+  const ICON_VOL_ON = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+  const ICON_VOL_OFF = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+
   function setMusicPlayingUI(playing){
-    els.musicPlayBtn.textContent = playing ? '⏸' : '▶';
+    els.musicPlayBtn.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
     els.musicPlayBtn.title = playing ? 'Pause' : 'Play';
     if('mediaSession' in navigator){
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
@@ -2861,7 +3001,7 @@ if(paused){
 
     els.musicVolBtn.addEventListener('click', () => {
       els.musicAudio.muted = !els.musicAudio.muted;
-      els.musicVolBtn.textContent = els.musicAudio.muted ? '🔇' : '🔊';
+      els.musicVolBtn.innerHTML = els.musicAudio.muted ? ICON_VOL_OFF : ICON_VOL_ON;
       els.musicVolBtn.classList.toggle('active', els.musicAudio.muted);
     });
 
@@ -2918,6 +3058,8 @@ if(paused){
   renderHistory();
   loadTheme();
   initMusicPlayer();
+  initWeather();
+  setInterval(initWeather, WEATHER_REFRESH_MS);
 
   // ---------- service worker ----------
   if ('serviceWorker' in navigator) {

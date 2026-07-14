@@ -132,28 +132,38 @@
   }
   .gauge-flip-wrap{
     position:relative;
-    perspective:1400px;
   }
   .gauge-flip-inner{
     position:relative;
     width:100%;
     aspect-ratio:300/190;
-    transform-style:preserve-3d;
-    transition:transform .6s cubic-bezier(.4,.15,.2,1);
-  }
-  .gauge-flip-wrap.flipped .gauge-flip-inner{
-    transform:rotateY(180deg);
   }
   .gauge-flip-front,.gauge-flip-back{
     position:absolute; inset:0;
-    -webkit-backface-visibility:hidden;
-    backface-visibility:hidden;
+    transition:opacity .32s ease, transform .32s ease;
+  }
+  .gauge-flip-front{
+    opacity:1;
+    transform:scale(1);
+    pointer-events:auto;
   }
   .gauge-flip-back{
-    transform:rotateY(180deg);
+    opacity:0;
+    transform:scale(0.97);
+    pointer-events:none;
     border-radius:16px;
     overflow:hidden;
     background:var(--panel);
+  }
+  .gauge-flip-wrap.flipped .gauge-flip-front{
+    opacity:0;
+    transform:scale(0.97);
+    pointer-events:none;
+  }
+  .gauge-flip-wrap.flipped .gauge-flip-back{
+    opacity:1;
+    transform:scale(1);
+    pointer-events:auto;
   }
   #liveMap{width:100%; height:100%;}
   .live-map-empty{
@@ -2700,9 +2710,9 @@ if(paused){
   // plays back with zero network access after that — same as the rest of the app.
   // Also add each file path to the precache list in sw.js so it's cached on install.
   const MUSIC_TRACKS = [
-  { title: 'Lifetime (Reimagined)', artist: 'Ben&Ben', src: 'assets/music/003 - Ben&Ben - Lifetime (Reimagined).mp3' },
-  { title: 'Tibok', artist: 'Earl Agustin', src: 'assets/music/026 - Tibok by Earl Agustin (Lyrics).mp3' },
-];
+    { title: 'Lifetime (Reimagined)', artist: 'Ben&Ben', src: 'assets/music/003 - Ben&Ben - Lifetime (Reimagined).mp3' },
+    { title: 'Tibok', artist: 'Earl Agustin', src: 'assets/music/026 - Tibok by Earl Agustin (Lyrics).mp3' },
+  ];
 
   let musicIdx = 0;
   let musicShuffleOn = false;
@@ -2734,21 +2744,39 @@ if(paused){
     if(!MUSIC_TRACKS.length) return;
     musicIdx = ((i % MUSIC_TRACKS.length) + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
     const track = MUSIC_TRACKS[musicIdx];
-    els.musicAudio.src = track.src;
+    els.musicAudio.src = encodeURI(track.src);
     els.musicTrackName.textContent = track.title;
     els.musicTrackIndex.textContent = `${currentTrackPos()+1}/${MUSIC_TRACKS.length}`;
     els.musicSeek.value = 0;
     els.musicCurTime.textContent = '0:00';
     els.musicDurTime.textContent = '0:00';
     try{ window.storage.set('music-last-track', JSON.stringify({ idx: musicIdx }), false); }catch(e){}
+    updateMediaSessionMetadata(track);
     if(autoplay){
       els.musicAudio.play().catch(()=>{});
     }
   }
 
+  function updateMediaSessionMetadata(track){
+    if(!('mediaSession' in navigator)) return;
+    try{
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title,
+        artist: track.artist || 'Velocity Log',
+        artwork: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-180-maskable.png', sizes: '180x180', type: 'image/png' },
+        ]
+      });
+    }catch(e){}
+  }
+
   function setMusicPlayingUI(playing){
     els.musicPlayBtn.textContent = playing ? '⏸' : '▶';
     els.musicPlayBtn.title = playing ? 'Pause' : 'Play';
+    if('mediaSession' in navigator){
+      navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+    }
   }
 
   function initMusicPlayer(){
@@ -2825,6 +2853,34 @@ if(paused){
       els.musicAudio.currentTime = Number(els.musicSeek.value);
       musicSeeking = false;
     });
+
+    if('mediaSession' in navigator){
+      navigator.mediaSession.setActionHandler('play', () => { els.musicAudio.play().catch(()=>{}); });
+      navigator.mediaSession.setActionHandler('pause', () => { els.musicAudio.pause(); });
+      navigator.mediaSession.setActionHandler('previoustrack', () => els.musicPrevBtn.click());
+      navigator.mediaSession.setActionHandler('nexttrack', () => els.musicNextBtn.click());
+      try{
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if(details.seekTime != null) els.musicAudio.currentTime = details.seekTime;
+        });
+      }catch(e){ /* not supported on this browser */ }
+      navigator.mediaSession.setActionHandler('stop', () => {
+        els.musicAudio.pause();
+        els.musicAudio.currentTime = 0;
+      });
+
+      els.musicAudio.addEventListener('timeupdate', () => {
+        if(!('setPositionState' in navigator.mediaSession)) return;
+        if(!isFinite(els.musicAudio.duration) || els.musicAudio.duration <= 0) return;
+        try{
+          navigator.mediaSession.setPositionState({
+            duration: els.musicAudio.duration,
+            playbackRate: els.musicAudio.playbackRate || 1,
+            position: els.musicAudio.currentTime,
+          });
+        }catch(e){}
+      });
+    }
   }
 
   // ---------- init ----------

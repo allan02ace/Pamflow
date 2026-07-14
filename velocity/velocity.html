@@ -723,6 +723,31 @@
     font-size:16px; cursor:pointer; padding:4px 2px 4px 6px; flex-shrink:0;
   }
   .fuel-entry-del:hover{color:var(--danger);}
+  .fuel-field.fuel-field-time{max-width:110px; flex:0 0 auto;}
+
+  /* oil change tracker (reuses .fuel-* row/list styling above) */
+  .oil-since{
+    font-family:'Space Mono',monospace; font-weight:700; font-size:13px; color:var(--good);
+    text-align:right; flex-shrink:0; white-space:nowrap;
+  }
+  .oil-since-unit{font-size:9px; color:var(--ink-faint); font-weight:400; display:block; text-align:right;}
+
+  /* share button on post-ride summary */
+  .ride-card-actions{
+    position:relative;
+    display:flex; justify-content:flex-end;
+    margin-top:10px;
+  }
+  .ride-share-btn{
+    display:flex; align-items:center; gap:6px;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:11px; letter-spacing:0.05em; text-transform:uppercase;
+    background:none; border:1px solid var(--hairline); color:var(--ink-dim);
+    border-radius:20px; padding:7px 14px; cursor:pointer;
+    transition:color .2s var(--ease-standard), border-color .2s var(--ease-standard), transform .15s var(--ease-spring);
+  }
+  .ride-share-btn:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .ride-share-btn:active{transform:scale(0.95);}
+  .ride-share-btn svg{width:13px; height:13px; flex-shrink:0;}
 
   /* tank setup modal */
   .tank-modal-body{padding:16px;}
@@ -849,9 +874,9 @@
   .ride-card{
     position:relative;
     overflow:hidden;
-    margin:14px 14px 4px;
-    padding:18px 18px 16px;
-    border-radius:18px;
+    margin:12px 12px 4px;
+    padding:13px 14px 12px;
+    border-radius:14px;
     background:linear-gradient(160deg, var(--panel-hi) 0%, var(--panel) 75%);
     border:1px solid var(--hairline);
     box-shadow: var(--shadow-card);
@@ -863,26 +888,40 @@
     background:radial-gradient(420px 160px at 100% -10%, var(--needle-glow) 0%, transparent 65%);
     pointer-events:none;
   }
-  .ride-card-badge{
+  .ride-card-top{
     position:relative;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .ride-card-badge{
     font-family:'Space Mono',monospace;
-    font-size:10px;
-    letter-spacing:0.16em;
+    font-size:9px;
+    letter-spacing:0.14em;
     text-transform:uppercase;
     color:var(--gold);
-    margin-bottom:10px;
+  }
+  .ride-card-time-range{
+    font-family:'Space Mono',monospace;
+    font-size:9px;
+    letter-spacing:0.02em;
+    color:var(--ink-faint);
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
   }
   .ride-card-hero{
     position:relative;
     display:flex;
     align-items:baseline;
-    gap:8px;
-    margin-bottom:16px;
+    gap:6px;
+    margin-bottom:10px;
   }
   .ride-card-metric-val{
     font-family:'Space Mono',monospace;
     font-weight:700;
-    font-size:46px;
+    font-size:32px;
     line-height:1;
     letter-spacing:-0.02em;
     font-variant-numeric:tabular-nums;
@@ -890,7 +929,7 @@
   }
   .ride-card-metric-unit{
     font-family:'Oswald',sans-serif;
-    font-size:13px;
+    font-size:11px;
     font-weight:500;
     letter-spacing:0.1em;
     text-transform:uppercase;
@@ -900,12 +939,12 @@
     position:relative;
     display:grid;
     grid-template-columns:repeat(3,1fr);
-    gap:8px;
+    gap:6px;
   }
   .ride-card-stat{
     text-align:center;
-    padding:10px 4px;
-    border-radius:12px;
+    padding:7px 4px;
+    border-radius:10px;
     background:rgba(0,0,0,0.16);
     border:1px solid rgba(255,255,255,0.04);
   }
@@ -915,20 +954,20 @@
   }
   .rc-label{
     font-family:'Space Mono',monospace;
-    font-size:9px;
-    letter-spacing:0.08em;
+    font-size:8px;
+    letter-spacing:0.07em;
     text-transform:uppercase;
     color:var(--ink-faint);
-    margin-bottom:4px;
+    margin-bottom:3px;
   }
   .rc-val{
     font-family:'Space Mono',monospace;
     font-weight:700;
-    font-size:16px;
+    font-size:14px;
     font-variant-numeric:tabular-nums;
   }
   .rc-val .rc-unit{
-    font-size:9px;
+    font-size:8px;
     font-weight:400;
     color:var(--ink-dim);
     text-transform:uppercase;
@@ -1093,6 +1132,7 @@
       <div class="section-tabs">
         <button class="section-tab active" id="tabRides">Rides</button>
         <button class="section-tab" id="tabFuel">Fuel</button>
+        <button class="section-tab" id="tabOil">Oil</button>
       </div>
       <div class="logbook-actions" id="ridesActions">
         <button class="compare-toggle" id="compareToggle">Compare</button>
@@ -1100,6 +1140,9 @@
       </div>
       <div class="logbook-actions" id="fuelActions" style="display:none;">
         <button class="clear-all" id="fuelClearAll">Clear all</button>
+      </div>
+      <div class="logbook-actions" id="oilActions" style="display:none;">
+        <button class="clear-all" id="oilClearAll">Clear all</button>
       </div>
       <div class="data-actions">
         <button class="data-btn" id="exportBtn">Export</button>
@@ -1131,6 +1174,10 @@
           <label for="litersInput">Liters added</label>
           <input type="number" inputmode="decimal" id="litersInput" placeholder="e.g. 32.5">
         </div>
+        <div class="fuel-field fuel-field-time">
+          <label for="fuelTimeInput">Time</label>
+          <input type="time" id="fuelTimeInput">
+        </div>
         <button class="fuel-add-btn" id="fuelAddBtn">Add</button>
       </div>
       <div class="fuel-full-row">
@@ -1139,6 +1186,22 @@
       </div>
       <div class="fuel-error" id="fuelError"></div>
       <div id="fuelList"></div>
+    </div>
+
+    <div id="oilSection" style="display:none;">
+      <div class="fuel-form">
+        <div class="fuel-field">
+          <label for="oilDateInput">Date</label>
+          <input type="date" id="oilDateInput">
+        </div>
+        <div class="fuel-field">
+          <label for="oilOdoInput">Odometer (km)</label>
+          <input type="number" inputmode="decimal" id="oilOdoInput" placeholder="e.g. 45210">
+        </div>
+        <button class="fuel-add-btn" id="oilAddBtn">Add</button>
+      </div>
+      <div class="fuel-error" id="oilError"></div>
+      <div id="oilList"></div>
     </div>
   </div>
 
@@ -1174,7 +1237,10 @@
     </div>
     <div class="modal-body">
       <div class="ride-card" id="rideCard" style="display:none;">
-        <div class="ride-card-badge" id="rcBadge">Ride complete</div>
+        <div class="ride-card-top">
+          <div class="ride-card-badge" id="rcBadge">Ride complete</div>
+          <div class="ride-card-time-range" id="rcTimeRange">–</div>
+        </div>
         <div class="ride-card-hero">
           <div class="ride-card-metric-val" id="rcDistance">0.0</div>
           <div class="ride-card-metric-unit" id="rcDistUnit">KM</div>
@@ -1192,6 +1258,12 @@
             <div class="rc-label">Max Speed</div>
             <div class="rc-val" id="rcMax">0 <span class="rc-unit">km/h</span></div>
           </div>
+        </div>
+        <div class="ride-card-actions">
+          <button class="ride-share-btn" id="rideShareBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
+          </button>
         </div>
       </div>
       <div class="map-wrap"><div id="rideMap"></div></div>
@@ -1426,6 +1498,8 @@ window.storage = (function () {
     rcDuration: document.getElementById('rcDuration'),
     rcAvg: document.getElementById('rcAvg'),
     rcMax: document.getElementById('rcMax'),
+    rcTimeRange: document.getElementById('rcTimeRange'),
+    rideShareBtn: document.getElementById('rideShareBtn'),
     playbackPanel: document.getElementById('playbackPanel'),
     playBtn: document.getElementById('playBtn'),
     scrubSlider: document.getElementById('scrubSlider'),
@@ -1437,17 +1511,27 @@ window.storage = (function () {
     pbDist: document.getElementById('pbDist'),
     tabRides: document.getElementById('tabRides'),
     tabFuel: document.getElementById('tabFuel'),
+    tabOil: document.getElementById('tabOil'),
     ridesSection: document.getElementById('ridesSection'),
     fuelSection: document.getElementById('fuelSection'),
+    oilSection: document.getElementById('oilSection'),
     ridesActions: document.getElementById('ridesActions'),
     fuelActions: document.getElementById('fuelActions'),
+    oilActions: document.getElementById('oilActions'),
     odoInput: document.getElementById('odoInput'),
     litersInput: document.getElementById('litersInput'),
+    fuelTimeInput: document.getElementById('fuelTimeInput'),
     fuelFullCheck: document.getElementById('fuelFullCheck'),
     fuelAddBtn: document.getElementById('fuelAddBtn'),
     fuelError: document.getElementById('fuelError'),
     fuelList: document.getElementById('fuelList'),
     fuelClearAll: document.getElementById('fuelClearAll'),
+    oilDateInput: document.getElementById('oilDateInput'),
+    oilOdoInput: document.getElementById('oilOdoInput'),
+    oilAddBtn: document.getElementById('oilAddBtn'),
+    oilError: document.getElementById('oilError'),
+    oilList: document.getElementById('oilList'),
+    oilClearAll: document.getElementById('oilClearAll'),
     tankCard: document.getElementById('tankCard'),
     tankCardInfo: document.getElementById('tankCardInfo'),
     tankEditBtn: document.getElementById('tankEditBtn'),
@@ -2165,6 +2249,7 @@ if(paused){
         await saveSession({
           id: savedId,
           date: Date.now(),
+          startDate: sessionStart,
           durationSec: Math.round(duration),
           distanceM: Math.round(distanceM),
           maxMs: maxSpeedMs,
@@ -2518,8 +2603,11 @@ if(paused){
     if(ev.target === els.modalBackdrop) closeModal();
   });
 
+  let currentRideCardEntry = null;
+
   function populateRideCard(entry, justFinished){
     if(!els.rideCard) return;
+    currentRideCardEntry = entry;
     const maxV = Math.round(msToUnit(entry.maxMs));
     const avgV = Math.round(msToUnit(entry.avgMs));
     const dist = metersToDistUnit(entry.distanceM).toFixed(1);
@@ -2532,6 +2620,13 @@ if(paused){
     els.rcDuration.textContent = formatDuration(entry.durationSec);
     els.rcAvg.innerHTML = `${avgV} <span class="rc-unit">km/h</span>`;
     els.rcMax.innerHTML = `${maxV} <span class="rc-unit">km/h</span>`;
+    if(els.rcTimeRange){
+      // Older saved rides won't have startDate — fall back to deriving it from
+      // the saved end timestamp and duration so the row still shows something sensible.
+      const startTs = entry.startDate || (entry.date - entry.durationSec * 1000);
+      const endTs = entry.startDate ? entry.startDate + entry.durationSec * 1000 : entry.date;
+      els.rcTimeRange.textContent = `${formatTime(startTs)} – ${formatTime(endTs)}`;
+    }
     els.rideCard.style.display = 'block';
   }
 
@@ -2688,15 +2783,22 @@ if(paused){
   });
 
   // ---------- section tabs ----------
+  function setActiveTab(tab){
+    els.tabRides.classList.toggle('active', tab === 'rides');
+    els.tabFuel.classList.toggle('active', tab === 'fuel');
+    els.tabOil.classList.toggle('active', tab === 'oil');
+    els.ridesSection.style.display = tab === 'rides' ? 'block' : 'none';
+    els.fuelSection.style.display = tab === 'fuel' ? 'block' : 'none';
+    els.oilSection.style.display = tab === 'oil' ? 'block' : 'none';
+    els.ridesActions.style.display = tab === 'rides' ? 'flex' : 'none';
+    els.fuelActions.style.display = tab === 'fuel' ? 'flex' : 'none';
+    els.oilActions.style.display = tab === 'oil' ? 'flex' : 'none';
+  }
   els.tabRides.addEventListener('click', ()=>{
-    els.tabRides.classList.add('active'); els.tabFuel.classList.remove('active');
-    els.ridesSection.style.display = 'block'; els.fuelSection.style.display = 'none';
-    els.ridesActions.style.display = 'flex'; els.fuelActions.style.display = 'none';
+    setActiveTab('rides');
   });
   els.tabFuel.addEventListener('click', async ()=>{
-    els.tabFuel.classList.add('active'); els.tabRides.classList.remove('active');
-    els.fuelSection.style.display = 'block'; els.ridesSection.style.display = 'none';
-    els.fuelActions.style.display = 'flex'; els.ridesActions.style.display = 'none';
+    setActiveTab('fuel');
     if(compareMode){ compareMode = false; compareSelection = []; els.compareToggle.classList.remove('active'); renderHistory(); }
     if(tankCapacityL === null){
       tankCapacityL = await loadTankCapacity();
@@ -2706,6 +2808,11 @@ if(paused){
       openTankModal();
     }
     renderFuel();
+  });
+  els.tabOil.addEventListener('click', async ()=>{
+    setActiveTab('oil');
+    if(compareMode){ compareMode = false; compareSelection = []; els.compareToggle.classList.remove('active'); renderHistory(); }
+    renderOil();
   });
 
   // ---------- tank capacity ----------
@@ -2764,6 +2871,33 @@ if(paused){
     if(ev.target === els.tankModalBackdrop) closeTankModal();
   });
 
+  // ---------- ride share ----------
+  if(els.rideShareBtn){
+    els.rideShareBtn.addEventListener('click', async ()=>{
+      const entry = currentRideCardEntry;
+      if(!entry) return;
+      const dist = metersToDistUnit(entry.distanceM).toFixed(1);
+      const dUnit = distUnitLabel();
+      const avgV = Math.round(msToUnit(entry.avgMs));
+      const maxV = Math.round(msToUnit(entry.maxMs));
+      const title = entry.note ? entry.note : `${formatDate(entry.date)} Ride`;
+      const text = `${title}\n${dist} ${dUnit} · ${formatDuration(entry.durationSec)} · avg ${avgV} km/h · max ${maxV} km/h\nLogged with Velocity Log`;
+
+      if(navigator.share){
+        try{
+          await navigator.share({ title, text });
+        }catch(e){ /* user cancelled the share sheet — nothing to do */ }
+        return;
+      }
+      try{
+        await navigator.clipboard.writeText(text);
+        showDataStatus('Ride summary copied to clipboard.', false);
+      }catch(e){
+        showDataStatus('Sharing isn\'t supported on this device.', true);
+      }
+    });
+  }
+
   // ---------- fuel tracker ----------
   async function loadFuel(){
     try{
@@ -2781,6 +2915,24 @@ if(paused){
     els.fuelError.style.display = msg ? 'block' : 'none';
   }
 
+  function currentTimeHHMM(){
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+  // pre-fill the time field with "now" so a fill-up logged on the spot needs
+  // no extra input, while still letting the rider back-date the time of day
+  // when logging a fuel-up after the fact.
+  if(els.fuelTimeInput) els.fuelTimeInput.value = currentTimeHHMM();
+
+  function timestampFromTimeInput(timeStr){
+    const now = new Date();
+    if(timeStr){
+      const [hh, mm] = timeStr.split(':').map(Number);
+      if(!Number.isNaN(hh) && !Number.isNaN(mm)) now.setHours(hh, mm, 0, 0);
+    }
+    return now.getTime();
+  }
+
   els.fuelAddBtn.addEventListener('click', async ()=>{
     showFuelError('');
     const odo = parseFloat(els.odoInput.value);
@@ -2794,12 +2946,14 @@ if(paused){
     }
 
     const arr = await loadFuel();
-    const entry = { id: Date.now().toString(36), date: Date.now(), odo, liters, full };
+    const date = timestampFromTimeInput(els.fuelTimeInput ? els.fuelTimeInput.value : '');
+    const entry = { id: Date.now().toString(36), date, odo, liters, full };
     arr.push(entry);
     arr.sort((a,b)=> a.odo - b.odo);
     await saveFuelArr(arr);
     els.odoInput.value = ''; els.litersInput.value = '';
     els.fuelFullCheck.checked = true;
+    if(els.fuelTimeInput) els.fuelTimeInput.value = currentTimeHHMM();
     renderFuel();
 
     // Let a host app embedding this page (e.g. PAMFlow) know a fuel entry was
@@ -2890,7 +3044,7 @@ if(paused){
           <div class="fuel-entry-date">${formatDate(e.date)}</div>
           <div class="fuel-entry-main">
             <div class="fuel-entry-odo">${e.odo.toLocaleString()} km${!isFull ? '<span class="fuel-entry-partial-tag">partial</span>' : ''}</div>
-            <div class="fuel-entry-sub">${e.liters}L added</div>
+            <div class="fuel-entry-sub">${e.liters}L added · ${formatTime(e.date)}</div>
           </div>
           ${consumptionHtml}
           <button class="fuel-entry-del" data-id="${e.id}" title="Delete">✕</button>
@@ -2900,6 +3054,92 @@ if(paused){
     els.fuelList.innerHTML = rows.join('');
     els.fuelList.querySelectorAll('.fuel-entry-del').forEach(btn=>{
       btn.addEventListener('click', ()=> deleteFuelEntry(btn.getAttribute('data-id')));
+    });
+  }
+
+  // ---------- oil change tracker ----------
+  if(els.oilDateInput){
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    els.oilDateInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+
+  async function loadOil(){
+    try{
+      const r = await window.storage.get('oil-changes', false);
+      return r ? JSON.parse(r.value) : [];
+    }catch(e){ return []; }
+  }
+  async function saveOilArr(arr){
+    try{ await window.storage.set('oil-changes', JSON.stringify(arr), false); }
+    catch(e){ console.error('oil save failed', e); }
+  }
+
+  function showOilError(msg){
+    els.oilError.textContent = msg;
+    els.oilError.style.display = msg ? 'block' : 'none';
+  }
+
+  els.oilAddBtn.addEventListener('click', async ()=>{
+    showOilError('');
+    const odo = parseFloat(els.oilOdoInput.value);
+    const dateStr = els.oilDateInput.value;
+    if(!odo || odo <= 0){ showOilError('Enter a valid odometer reading.'); return; }
+    if(!dateStr){ showOilError('Pick a date for the oil change.'); return; }
+    // treat the picked calendar date as noon local time so it sorts sensibly
+    // and doesn't shift a day when displayed in a different timezone
+    const [y, m, dd] = dateStr.split('-').map(Number);
+    const date = new Date(y, (m||1)-1, dd||1, 12, 0, 0, 0).getTime();
+
+    const arr = await loadOil();
+    const entry = { id: Date.now().toString(36), date, odo };
+    arr.push(entry);
+    arr.sort((a,b)=> a.odo - b.odo);
+    await saveOilArr(arr);
+    els.oilOdoInput.value = '';
+    renderOil();
+  });
+
+  els.oilClearAll.addEventListener('click', async ()=>{
+    if(!confirm('Clear all oil change entries? This cannot be undone.')) return;
+    await saveOilArr([]);
+    renderOil();
+  });
+
+  async function deleteOilEntry(id){
+    const arr = await loadOil();
+    await saveOilArr(arr.filter(e => e.id !== id));
+    renderOil();
+  }
+
+  async function renderOil(){
+    const arr = await loadOil(); // ascending by odometer
+    if(!arr.length){
+      els.oilList.innerHTML = `<div class="empty-state"><span class="glyph">🛢️</span>No oil changes logged yet — add your first one above.</div>`;
+      return;
+    }
+    const rows = [];
+    for(let i = arr.length - 1; i >= 0; i--){
+      const e = arr[i];
+      const prev = arr[i-1];
+      const sinceHtml = prev
+        ? `<div class="oil-since">+${(e.odo - prev.odo).toLocaleString()}<span class="oil-since-unit">km</span></div>`
+        : `<div class="oil-since" style="color:var(--ink-faint); font-weight:400; font-size:11px;">first change</div>`;
+      rows.push(`
+        <div class="fuel-entry">
+          <div class="fuel-entry-date">${formatDate(e.date)}</div>
+          <div class="fuel-entry-main">
+            <div class="fuel-entry-odo">${e.odo.toLocaleString()} km</div>
+            <div class="fuel-entry-sub">Oil changed</div>
+          </div>
+          ${sinceHtml}
+          <button class="fuel-entry-del" data-id="${e.id}" title="Delete">✕</button>
+        </div>
+      `);
+    }
+    els.oilList.innerHTML = rows.join('');
+    els.oilList.querySelectorAll('.fuel-entry-del').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteOilEntry(btn.getAttribute('data-id')));
     });
   }
 
@@ -2916,12 +3156,14 @@ if(paused){
     try{
       const sessions = await loadHistory();
       const fuel = await loadFuel();
+      const oil = await loadOil();
       const payload = {
         app: 'velocity-log',
         version: 1,
         exportedAt: Date.now(),
         sessions,
-        fuel
+        fuel,
+        oil
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -2934,7 +3176,7 @@ if(paused){
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      showDataStatus(`Exported ${sessions.length} ride(s) and ${fuel.length} fuel entry(ies).`, false);
+      showDataStatus(`Exported ${sessions.length} ride(s), ${fuel.length} fuel entry(ies) and ${oil.length} oil change(s).`, false);
     }catch(e){
       console.error('export failed', e);
       showDataStatus('Export failed — see console for details.', true);
@@ -2950,12 +3192,13 @@ if(paused){
     try{
       const text = await file.text();
       const data = JSON.parse(text);
-      if(!data || (!Array.isArray(data.sessions) && !Array.isArray(data.fuel))){
+      if(!data || (!Array.isArray(data.sessions) && !Array.isArray(data.fuel) && !Array.isArray(data.oil))){
         showDataStatus('That file doesn\'t look like a Velocity Log export.', true);
         return;
       }
       const incomingSessions = Array.isArray(data.sessions) ? data.sessions : [];
       const incomingFuel = Array.isArray(data.fuel) ? data.fuel : [];
+      const incomingOil = Array.isArray(data.oil) ? data.oil : [];
 
       const mergeById = (existing, incoming) => {
         const byId = new Map(existing.map(e => [e.id, e]));
@@ -2971,9 +3214,14 @@ if(paused){
       const mergedFuel = mergeById(existingFuel, incomingFuel).sort((a,b)=> a.odo - b.odo);
       await saveFuelArr(mergedFuel);
 
+      const existingOil = await loadOil();
+      const mergedOil = mergeById(existingOil, incomingOil).sort((a,b)=> a.odo - b.odo);
+      await saveOilArr(mergedOil);
+
       renderHistory();
       renderFuel();
-      showDataStatus(`Imported — now ${mergedSessions.length} ride(s), ${mergedFuel.length} fuel entry(ies).`, false);
+      renderOil();
+      showDataStatus(`Imported — now ${mergedSessions.length} ride(s), ${mergedFuel.length} fuel entry(ies), ${mergedOil.length} oil change(s).`, false);
     }catch(e){
       console.error('import failed', e);
       showDataStatus('Import failed — file may be corrupted or invalid JSON.', true);
@@ -3218,7 +3466,26 @@ if(paused){
   // ---------- service worker ----------
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch((err) => {
+      navigator.serviceWorker.register('sw.js').then(() => {
+        // sw.js normally only caches a track the first time it's *played*.
+        // To make the whole library available offline right away, ask the
+        // active worker to fetch + cache every track up front. We only do
+        // this once per track list (tracked in storage) so we don't
+        // re-download the whole library on every page load.
+        return navigator.serviceWorker.ready;
+      }).then(async (reg) => {
+        if(!reg.active || !MUSIC_TRACKS.length) return;
+        const urls = MUSIC_TRACKS.map(t => encodeURI(t.src));
+        const cacheKey = JSON.stringify(urls);
+        let alreadyCached = null;
+        try{
+          const r = await window.storage.get('music-precache-key', false);
+          alreadyCached = r ? r.value : null;
+        }catch(e){ /* ignore — worst case we re-send the message */ }
+        if(alreadyCached === cacheKey) return;
+        reg.active.postMessage({ type: 'CACHE_ALL_MUSIC', urls });
+        try{ await window.storage.set('music-precache-key', cacheKey, false); }catch(e){}
+      }).catch((err) => {
         console.warn('Service worker registration failed:', err);
       });
     });

@@ -772,7 +772,7 @@
     <div class="header-btns">
       <button class="debug-toggle" id="debugToggle" title="Speed accuracy diagnostics">🛠</button>
       <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
-      <button class="unit-toggle" id="unitToggle">MPH</button>
+      <button class="unit-toggle" id="unitToggle">KMH</button>
     </div>
   </div>
 
@@ -791,7 +791,7 @@
     </div>
     <div class="readout">
       <div class="readout-num" id="readoutNum">0</div>
-      <div class="readout-unit" id="readoutUnit">MPH</div>
+      <div class="readout-unit" id="readoutUnit">KM/H</div>
       <div class="gps-status"><span class="gps-dot" id="gpsDot"></span><span id="gpsStatusText">Idle</span></div>
       <div class="debug-panel" id="debugPanel">
         <div class="debug-row"><span class="debug-label">Device speed</span><span class="debug-val" id="dbgRawSpeed">–</span></div>
@@ -1053,7 +1053,7 @@ window.storage = (function () {
 
 (function(){
   // ---------- state ----------
-  let unit = 'mph'; // 'mph' | 'kmh'
+  let unit = 'kmh'; // 'mph' | 'kmh'
   let tracking = false;
   let watchId = null;
   let demoMode = false;

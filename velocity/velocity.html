@@ -772,7 +772,7 @@
     <div class="header-btns">
       <button class="debug-toggle" id="debugToggle" title="Speed accuracy diagnostics">🛠</button>
       <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
-      <button class="unit-toggle" id="unitToggle">KMH</button>
+      <button class="unit-toggle" id="unitToggle">MPH</button>
     </div>
   </div>
 
@@ -791,7 +791,7 @@
     </div>
     <div class="readout">
       <div class="readout-num" id="readoutNum">0</div>
-      <div class="readout-unit" id="readoutUnit">KM/H</div>
+      <div class="readout-unit" id="readoutUnit">MPH</div>
       <div class="gps-status"><span class="gps-dot" id="gpsDot"></span><span id="gpsStatusText">Idle</span></div>
       <div class="debug-panel" id="debugPanel">
         <div class="debug-row"><span class="debug-label">Device speed</span><span class="debug-val" id="dbgRawSpeed">–</span></div>
@@ -1053,7 +1053,7 @@ window.storage = (function () {
 
 (function(){
   // ---------- state ----------
-  let unit = 'kmh'; // 'mph' | 'kmh'
+  let unit = 'mph'; // 'mph' | 'kmh'
   let tracking = false;
   let watchId = null;
   let demoMode = false;
@@ -1066,31 +1066,6 @@ window.storage = (function () {
   let maxSpeedMs = 0;
   let speedSamples = []; // in m/s, time-weighted-ish (simple avg)
   let currentSpeedMs = 0;
-
-  // ---------- Kalman Filter ----------
-let kalmanEstimate = 0;
-let kalmanError = 1;
-
-const KALMAN_Q = 0.08;   // process noise
-const KALMAN_R = 2.5;    // measurement noise
-
-function kalmanSpeed(measurement){
-
-    kalmanError += KALMAN_Q;
-
-    const gain =
-        kalmanError /
-        (kalmanError + KALMAN_R);
-
-    kalmanEstimate =
-        kalmanEstimate +
-        gain * (measurement - kalmanEstimate);
-
-    kalmanError =
-        (1 - gain) * kalmanError;
-
-    return kalmanEstimate;
-}
 
   let sessionPath = []; // [{lat, lon, t (sec offset), v (m/s), d (meters so far)}]
   let lastPathSample = null; // {lat, lon, t}
@@ -1555,35 +1530,31 @@ function kalmanSpeed(measurement){
     updateDebugPanel({ rawSpeed, calcSpeed, source, accuracy: acc, dt, dist: d });
 
     if(instSpeed !== null){
-      // Kalman filter
-instSpeed = kalmanSpeed(instSpeed);
+      // Adaptive smoothing: still smooths out small fix-to-fix jitter (a
+      // steady speed shouldn't visibly wobble), but reacts fast to real
+      // changes — an early version stacked this on top of a Kalman filter
+      // that was too conservative, and together they made the readout lag
+      // several seconds behind real acceleration/braking. One responsive
+      // pass is enough now that GPS accuracy is confirmed to be good.
+      let diff = Math.abs(instSpeed-currentSpeedMs);
 
-// Adaptive smoothing
-let diff = Math.abs(instSpeed-currentSpeedMs);
+      let alpha;
+      if(diff < 1){
+          alpha = 0.45;
+      }
+      else if(diff < 3){
+          alpha = 0.65;
+      }
+      else if(diff < 8){
+          alpha = 0.85;
+      }
+      else{
+          alpha = 1.0; // big, already-plausible jump — snap straight to it
+      }
 
-let alpha;
+      currentSpeedMs += alpha * (instSpeed-currentSpeedMs);
 
-if(diff < 1){
-    alpha = 0.05;
-}
-else if(diff < 3){
-    alpha = 0.10;
-}
-else if(diff < 8){
-    alpha = 0.18;
-}
-else if(diff < 15){
-    alpha = 0.35;
-}
-else{
-    alpha = 0.60;
-}
-
-currentSpeedMs +=
-    alpha *
-    (instSpeed-currentSpeedMs);
-
-updateReadout(currentSpeedMs);
+      updateReadout(currentSpeedMs);
 
       const isPaused = checkAutoPause(instSpeed, now);
       if(!isPaused){

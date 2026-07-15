@@ -323,6 +323,20 @@ button{font-family:inherit; cursor:pointer;}
 .chip-class.active{background:var(--main); color:#fff; border-color:var(--main);}
 .chip-class.active .dot{background:#fff;}
 
+/* Transactions filters — two selects side by side */
+.txn-filter-row{display:flex; gap:8px; padding: 2px 0 14px;}
+.txn-filter-select{
+  flex:1; min-width:0;
+  border:1px solid var(--line); background:var(--white); color:var(--ink);
+  font-family:'Nunito'; font-weight:700; font-size:12.5px; padding:10px 28px 10px 13px;
+  border-radius:14px; outline:none; appearance:none; -webkit-appearance:none;
+  transition: border-color .15s ease;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236b4d78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position: right 10px center; background-size:14px;
+}
+.txn-filter-select:focus{border-color: var(--accent);}
+.txn-filter-select.has-value{border-color: var(--accent); color:var(--accent);}
+
 /* ===== Modal ===== */
 .overlay{
   position:fixed; inset:0; background: rgba(58,10,84,0.42); backdrop-filter: blur(2px);
@@ -714,8 +728,10 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
       <h2>All transactions</h2>
       <button class="icon-btn" style="width:34px;height:34px;font-size:15px;" onclick="go('recurring')" aria-label="Recurring transactions">🔁</button>
     </div>
-    <div class="filterbar" id="txn-filter"></div>
-    <div class="filterbar-sub" id="txn-class-filter"></div>
+    <div class="txn-filter-row">
+      <select class="txn-filter-select" id="txn-filter" onchange="setTxnFilter(this.value)"></select>
+      <select class="txn-filter-select" id="txn-class-filter" onchange="setTxnClassFilter(this.value)"></select>
+    </div>
     <div class="txn-list" id="txn-all-list"></div>
   </div>
 
@@ -789,6 +805,14 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     <div class="settings-row" style="background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:10px;">
       <div class="lbl">🔊 Sound effects</div>
       <label class="switch"><input type="checkbox" id="settings-sound-enabled" aria-label="Sound effects" onchange="toggleSoundEnabled()"><span class="track"></span></label>
+    </div>
+    <div class="settings-row" style="background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm) var(--radius-sm) 0 0; margin-bottom:0;">
+      <div class="lbl">🔔 Daily reminder</div>
+      <label class="switch"><input type="checkbox" id="settings-reminder-enabled" aria-label="Daily reminder notification" onchange="toggleReminderEnabled()"><span class="track"></span></label>
+    </div>
+    <div class="settings-row sub-toggle" id="reminder-time-row" style="background:var(--card); border:1px solid var(--line); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); margin-bottom:10px; display:none;">
+      <div class="lbl" style="font-weight:700; font-size:12.5px; color:var(--ink-soft);">Remind me at</div>
+      <input type="time" id="settings-reminder-time" value="20:00" style="border:1px solid var(--line); background:var(--white); color:var(--ink); border-radius:10px; padding:6px 9px; font-family:'DM Mono',monospace; font-size:13px;" onchange="setReminderTime(this.value)">
     </div>
     <div style="margin-bottom:16px;">
       <div class="lbl" style="font-weight:800; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;">🌙 Appearance</div>
@@ -1187,7 +1211,7 @@ function defaultState(){
     transactions: [],
     recurring: [],
     classifications: defaultClassifications(),
-    settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [], userName: '', hideAmounts: false, theme: 'system', soundEnabled: true }
+    settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [], userName: '', hideAmounts: false, theme: 'system', soundEnabled: true, reminderEnabled: false, reminderTime: '20:00' }
   };
 }
 let state = defaultState();
@@ -1209,6 +1233,8 @@ const SETTINGS_SCHEMA = {
   hideAmounts:       { type:'boolean', default:()=>false },
   theme:             { type:'string',  default:()=>'system' },
   soundEnabled:      { type:'boolean', default:()=>true },
+  reminderEnabled:   { type:'boolean', default:()=>false },
+  reminderTime:      { type:'string',  default:()=>'20:00' },
 };
 
 // Brings any saved state (however old) up to the current shape. Safe to run on
@@ -1549,11 +1575,13 @@ let txnFilterAccount = 'all';
 let txnFilterClass = 'all';
 function renderAllTxns(){
   const bar = document.getElementById('txn-filter');
-  bar.innerHTML = `<button class="chip ${txnFilterAccount==='all'?'active':''}" onclick="setTxnFilter('all')">All</button>` +
-    state.accounts.map(a=>`<button class="chip ${txnFilterAccount===a.id?'active':''}" onclick="setTxnFilter('${a.id}')">${a.icon} ${escapeHtml(a.name)}</button>`).join('');
+  bar.innerHTML = `<option value="all">All accounts</option>` +
+    state.accounts.map(a=>`<option value="${a.id}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
+  bar.value = txnFilterAccount;
+  bar.classList.toggle('has-value', txnFilterAccount !== 'all');
 
-  // Second row: filter by classification. Only offer classifications that
-  // are actually in use, so the row doesn't fill up with empty categories.
+  // Second dropdown: filter by classification. Only offer classifications
+  // that are actually in use, so the list doesn't fill up with empty ones.
   const classBar = document.getElementById('txn-class-filter');
   const usedClassIds = new Set(state.transactions.map(t=>t.classificationId).filter(Boolean));
   const usedClasses = state.classifications.filter(c=>usedClassIds.has(c.id));
@@ -1563,8 +1591,10 @@ function renderAllTxns(){
     if(txnFilterClass !== 'all') txnFilterClass = 'all';
   } else {
     classBar.style.display = '';
-    classBar.innerHTML = `<button class="chip-class ${txnFilterClass==='all'?'active':''}" onclick="setTxnClassFilter('all')"><span class="dot" style="background:var(--main)"></span>All</button>` +
-      usedClasses.map(c=>`<button class="chip-class ${txnFilterClass===c.id?'active':''}" onclick="setTxnClassFilter('${c.id}')"><span class="dot" style="background:${c.type==='income'?'var(--color-success)':'var(--color-danger)'}"></span>${escapeHtml(c.name)}</button>`).join('');
+    classBar.innerHTML = `<option value="all">All categories</option>` +
+      usedClasses.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+    classBar.value = txnFilterClass;
+    classBar.classList.toggle('has-value', txnFilterClass !== 'all');
   }
 
   let list = [...state.transactions];
@@ -2791,6 +2821,12 @@ function renderSettings(){
   applyHideAmountsUI();
   const soundSw = document.getElementById('settings-sound-enabled');
   if(soundSw) soundSw.checked = !!state.settings.soundEnabled;
+  const remindSw = document.getElementById('settings-reminder-enabled');
+  if(remindSw) remindSw.checked = !!state.settings.reminderEnabled;
+  const remindTimeRow = document.getElementById('reminder-time-row');
+  if(remindTimeRow) remindTimeRow.style.display = state.settings.reminderEnabled ? '' : 'none';
+  const remindTimeInput = document.getElementById('settings-reminder-time');
+  if(remindTimeInput && document.activeElement !== remindTimeInput) remindTimeInput.value = state.settings.reminderTime || '20:00';
   renderThemeSeg();
   renderLastBackupNote();
   const nameInput = document.getElementById('settings-username');
@@ -2885,6 +2921,38 @@ function toggleSoundEnabled(){
   if(sw) sw.checked = state.settings.soundEnabled;
   if(state.settings.soundEnabled) playIncomeSound(); // quick preview so the toggle is self-explanatory
 }
+function toggleReminderEnabled(){
+  const turningOn = !state.settings.reminderEnabled;
+  if(turningOn && (!('Notification' in window))){
+    toast("This browser doesn't support notifications");
+    const sw = document.getElementById('settings-reminder-enabled');
+    if(sw) sw.checked = false;
+    return;
+  }
+  if(turningOn){
+    Notification.requestPermission().then(perm=>{
+      if(perm !== 'granted'){
+        toast('Notifications were blocked — check your browser settings');
+        state.settings.reminderEnabled = false;
+        saveState(); renderSettings();
+        return;
+      }
+      state.settings.reminderEnabled = true;
+      saveState(); renderSettings(); scheduleDailyReminder();
+      toast(`Daily reminder set for ${state.settings.reminderTime}`);
+    });
+  } else {
+    state.settings.reminderEnabled = false;
+    saveState(); renderSettings();
+    clearTimeout(reminderTimer);
+  }
+}
+function setReminderTime(val){
+  state.settings.reminderTime = val || '20:00';
+  saveState();
+  scheduleDailyReminder();
+  toast(`Daily reminder set for ${state.settings.reminderTime}`);
+}
 function applyHideAmountsUI(){
   const hidden = state.settings.hideAmounts;
   const btn = document.getElementById('hide-amounts-btn');
@@ -2965,6 +3033,63 @@ function renderGreeting(){
   const idx = Math.floor(Date.now() / 86400000) % FUNNY_GREETINGS.length; // changes once a day
   funEl.textContent = FUNNY_GREETINGS[idx];
 }
+
+/* ============ DAILY REMINDER NOTIFICATIONS ============ */
+// Local notifications only — there's no backend here to push from, so this
+// only fires while the app/tab is open (or gets reopened) at or after the
+// chosen time. It reuses the same funny-message rotation as the in-app
+// greeting, so the nudge sounds like the rest of the app.
+let reminderTimer = null;
+const REMINDER_LAST_KEY = 'pamflow_last_reminder_date';
+
+function todayDateStr(d){
+  d = d || new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function funnyMessageForToday(){
+  const idx = Math.floor(Date.now() / 86400000) % FUNNY_GREETINGS.length;
+  return FUNNY_GREETINGS[idx];
+}
+function fireReminderNotification(){
+  const title = 'PAMFlow';
+  const opts = { body: funnyMessageForToday(), icon: './icon-192.png', badge: './icon-192.png', tag: 'pamflow-daily-reminder' };
+  const show = ()=>{ try{ new Notification(title, opts); }catch(e){} };
+  if(navigator.serviceWorker && navigator.serviceWorker.ready){
+    navigator.serviceWorker.ready.then(reg=>{
+      if(reg && reg.showNotification) reg.showNotification(title, opts); else show();
+    }).catch(show);
+  } else {
+    show();
+  }
+  localStorage.setItem(REMINDER_LAST_KEY, todayDateStr());
+}
+// Schedules (or re-schedules) the next reminder. Called on load, whenever the
+// reminder setting/time changes, and when the tab becomes visible again —
+// that last one covers the device being asleep or the tab closed right
+// through the target time, so reopening the app still catches it up.
+function scheduleDailyReminder(){
+  clearTimeout(reminderTimer);
+  if(!state.settings.reminderEnabled) return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const parts = (state.settings.reminderTime || '20:00').split(':').map(Number);
+  const now = new Date();
+  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parts[0], parts[1] || 0, 0, 0);
+
+  if(target <= now){
+    // Today's time already passed — catch up once, then queue tomorrow.
+    if(localStorage.getItem(REMINDER_LAST_KEY) !== todayDateStr()) fireReminderNotification();
+    target.setDate(target.getDate() + 1);
+  }
+  const delay = target - now;
+  reminderTimer = setTimeout(()=>{
+    fireReminderNotification();
+    scheduleDailyReminder();
+  }, Math.min(delay, 2147483647)); // setTimeout's max delay, well above a day
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible') scheduleDailyReminder();
+});
 
 function confirmReset(){
   const val = prompt('This permanently erases all accounts and transactions. This cannot be undone.\n\nType DELETE to confirm.');
@@ -3085,7 +3210,7 @@ function runWithBusy(buttonId, work, minDelay = 220){
   app.addEventListener('touchstart', e=>{
     if(e.touches.length !== 1) return;
     // Don't hijack horizontal scrolling inside the filter chip bar.
-    if(e.target.closest('.filterbar, .filterbar-sub, .acc-select-grid, .emoji-row, .logo-row')) { tracking = false; return; }
+    if(e.target.closest('.filterbar, .filterbar-sub, .txn-filter-row, .acc-select-grid, .emoji-row, .logo-row')) { tracking = false; return; }
     startX = e.touches[0].clientX; startY = e.touches[0].clientY; tracking = true;
   }, { passive:true });
   app.addEventListener('touchend', e=>{
@@ -3124,6 +3249,7 @@ processRecurring();
 go('home');
 maybeShowWelcomeName();
 handleAppShortcut();
+scheduleDailyReminder();
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState==='visible' && processRecurring()) render();
 });

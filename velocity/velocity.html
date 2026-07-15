@@ -749,6 +749,83 @@
   .ride-share-btn:active{transform:scale(0.95);}
   .ride-share-btn svg{width:13px; height:13px; flex-shrink:0;}
 
+  /* floating post-ride summary popup — detached card, not a bottom sheet */
+  .float-card-backdrop{
+    position:fixed; inset:0;
+    background:rgba(6,7,8,0.72);
+    backdrop-filter:blur(3px);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    padding:0 16px calc(28px + env(safe-area-inset-bottom, 0px));
+    z-index:120;
+  }
+  .float-card-backdrop.open{display:flex; animation:backdrop-fade .25s var(--ease-standard);}
+  .float-card{
+    position:relative;
+    width:100%; max-width:420px;
+    background:var(--panel);
+    border-radius:22px;
+    border:1px solid var(--hairline);
+    box-shadow: 0 26px 60px -16px rgba(0,0,0,0.65), 0 4px 18px -4px rgba(0,0,0,0.45);
+    padding:6px;
+    animation: float-card-pop .38s var(--ease-spring);
+  }
+  @keyframes float-card-pop{
+    from{opacity:0; transform:translateY(48px) scale(0.92);}
+    to{opacity:1; transform:translateY(0) scale(1);}
+  }
+  .float-card .ride-card{margin:0 0 4px;}
+  .fc-style-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:2px 8px 10px;
+  }
+  .fc-style-label{
+    font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .fc-style-toggle{
+    display:flex; gap:3px;
+    background:var(--panel-hi); border:1px solid var(--hairline); border-radius:20px; padding:3px;
+  }
+  .fc-style-opt{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:10px; letter-spacing:0.03em; text-transform:uppercase;
+    background:none; border:none; color:var(--ink-faint);
+    padding:6px 10px; border-radius:16px; cursor:pointer; white-space:nowrap;
+    transition:background .2s var(--ease-standard), color .2s var(--ease-standard);
+  }
+  .fc-style-opt.active{background:var(--needle-gradient); color:#1a0d08;}
+  .fc-style-opt:disabled{opacity:0.35; cursor:not-allowed;}
+  .float-card-close{
+    position:absolute; top:-14px; right:-6px;
+    width:32px; height:32px; border-radius:50%;
+    background:var(--panel-hi); border:1px solid var(--hairline); color:var(--ink-dim);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; cursor:pointer;
+    box-shadow: 0 4px 10px -2px rgba(0,0,0,0.55);
+    transition:color .2s var(--ease-standard), transform .15s var(--ease-spring);
+  }
+  .float-card-close:hover{color:var(--ink);}
+  .float-card-close:active{transform:scale(0.88);}
+  .float-card-actions{
+    display:flex; gap:8px;
+    padding:2px 8px 8px;
+  }
+  .float-card-btn{
+    flex:1;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;
+    border-radius:11px; padding:12px 8px; cursor:pointer; border:1px solid var(--hairline);
+    transition:filter .2s var(--ease-standard), transform .15s var(--ease-spring), color .2s var(--ease-standard), border-color .2s var(--ease-standard);
+  }
+  .float-card-btn:active{transform:scale(0.97);}
+  .float-card-btn-ghost{background:var(--panel-hi); color:var(--ink-dim);}
+  .float-card-btn-ghost:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .float-card-btn-primary{background:var(--needle-gradient); color:#1a0d08; border-color:transparent;}
+  .float-card-btn-primary:hover{filter:brightness(1.08);}
+  .float-card-btn-primary:disabled{opacity:0.6; cursor:default; filter:none; transform:none;}
+  .float-card-btn svg{width:14px; height:14px; flex-shrink:0;}
+
   /* tank setup modal */
   .tank-modal-body{padding:16px;}
   .tank-modal-desc{font-size:12px; color:var(--ink-dim); line-height:1.5; margin-bottom:16px;}
@@ -1037,6 +1114,7 @@
   @media (prefers-reduced-motion: reduce){
     .needle{transition:none;}
     .modal-sheet{animation:none;}
+    .float-card{animation:none;}
   }
 </style>
 </head>
@@ -1291,6 +1369,51 @@
   </div>
 </div>
 
+<!-- Post-ride floating summary — a detached card, not a full-screen sheet -->
+<div class="float-card-backdrop" id="floatCardBackdrop">
+  <div class="float-card" id="floatCard">
+    <button class="float-card-close" id="floatCardClose" aria-label="Close">✕</button>
+    <div class="ride-card" id="fcRideCard">
+      <div class="ride-card-top">
+        <div class="ride-card-badge" id="fcBadge">Ride complete</div>
+        <div class="ride-card-time-range" id="fcTimeRange">–</div>
+      </div>
+      <div class="ride-card-hero">
+        <div class="ride-card-metric-val" id="fcDistance">0.0</div>
+        <div class="ride-card-metric-unit" id="fcDistUnit">KM</div>
+      </div>
+      <div class="ride-card-grid">
+        <div class="ride-card-stat">
+          <div class="rc-label">Duration</div>
+          <div class="rc-val" id="fcDuration">0:00</div>
+        </div>
+        <div class="ride-card-stat">
+          <div class="rc-label">Avg Speed</div>
+          <div class="rc-val" id="fcAvg">0 <span class="rc-unit">km/h</span></div>
+        </div>
+        <div class="ride-card-stat">
+          <div class="rc-label">Max Speed</div>
+          <div class="rc-val" id="fcMax">0 <span class="rc-unit">km/h</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-style-row" id="fcStyleRow">
+      <span class="fc-style-label">Share style</span>
+      <div class="fc-style-toggle" id="fcStyleToggle">
+        <button type="button" class="fc-style-opt active" data-style="card" id="fcStyleCardBtn">Card</button>
+        <button type="button" class="fc-style-opt" data-style="transparent" id="fcStyleTransparentBtn" title="Needs a recorded route">Transparent + Route</button>
+      </div>
+    </div>
+    <div class="float-card-actions">
+      <button class="float-card-btn float-card-btn-ghost" id="fcViewRouteBtn">View Route</button>
+      <button class="float-card-btn float-card-btn-primary" id="fcShareBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="9.5" r="1.75" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>
+        Share Image
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ---------- persistent storage (IndexedDB) ----------
 // Replaces the Claude-artifact-only `window.storage` API with a real, standalone
@@ -1500,6 +1623,21 @@ window.storage = (function () {
     rcMax: document.getElementById('rcMax'),
     rcTimeRange: document.getElementById('rcTimeRange'),
     rideShareBtn: document.getElementById('rideShareBtn'),
+    floatCardBackdrop: document.getElementById('floatCardBackdrop'),
+    floatCard: document.getElementById('floatCard'),
+    floatCardClose: document.getElementById('floatCardClose'),
+    fcBadge: document.getElementById('fcBadge'),
+    fcTimeRange: document.getElementById('fcTimeRange'),
+    fcDistance: document.getElementById('fcDistance'),
+    fcDistUnit: document.getElementById('fcDistUnit'),
+    fcDuration: document.getElementById('fcDuration'),
+    fcAvg: document.getElementById('fcAvg'),
+    fcMax: document.getElementById('fcMax'),
+    fcViewRouteBtn: document.getElementById('fcViewRouteBtn'),
+    fcShareBtn: document.getElementById('fcShareBtn'),
+    fcStyleRow: document.getElementById('fcStyleRow'),
+    fcStyleCardBtn: document.getElementById('fcStyleCardBtn'),
+    fcStyleTransparentBtn: document.getElementById('fcStyleTransparentBtn'),
     playbackPanel: document.getElementById('playbackPanel'),
     playBtn: document.getElementById('playBtn'),
     scrubSlider: document.getElementById('scrubSlider'),
@@ -2027,7 +2165,11 @@ instSpeed>1 &&
 acc!==null &&
 acc<15
 ){
-    maxSpeedMs=Math.max(maxSpeedMs,currentSpeedMs);
+    // Use the raw (unsmoothed) instantaneous speed here, not currentSpeedMs —
+    // the alpha filter exists to keep the readout visually stable, but it
+    // damps genuine spikes, which would make recorded max speed consistently
+    // read a little low on sharp acceleration.
+    maxSpeedMs=Math.max(maxSpeedMs,instSpeed);
 }
         if(dt !== null){
           speedSamples.push({ v: instSpeed, dt: Math.min(dt, MAX_SAMPLE_WEIGHT_S) });
@@ -2092,17 +2234,28 @@ if(paused){
     updateLiveStats();
   }
 
-  function handleGeoError(err) {
-    alert(
-        "Code: " + err.code +
-        "\nMessage: " + err.message
-    );
+  let geoFatalAlertShown = false;
 
+  function handleGeoError(err) {
     console.error(err);
 
-    // DON'T stop tracking yet
-    setGpsStatus('error', err.message);
-}
+    // watchPosition calls this on every transient hiccup (tunnel, weak
+    // signal, brief timeout) — alerting each time would spam modal dialogs
+    // throughout an active ride. Surface those through the GPS status dot
+    // instead, and reserve the interruptive alert for a genuinely fatal,
+    // one-time condition: the user denying location permission.
+    if(err.code === err.PERMISSION_DENIED){
+      setGpsStatus('error', 'Location permission denied');
+      if(!geoFatalAlertShown){
+        geoFatalAlertShown = true;
+        alert('Location permission was denied, so this session can\'t be tracked. Enable location access and start tracking again.');
+      }
+      return;
+    }
+
+    const text = err.code === err.TIMEOUT ? 'GPS timed out — retrying…' : (err.message || 'GPS error');
+    setGpsStatus('error', text);
+  }
 
   function setGpsStatus(state, text){
     els.gpsDot.className = 'gps-dot' + (state ? ' '+state : '');
@@ -2204,6 +2357,7 @@ if(paused){
     resetAutoPause();
     resetDebugPanel();
     resetLiveMapTrack();
+    geoFatalAlertShown = false;
     setGpsStatus('', 'Locating…');
     setHint('Keep this screen open while you drive or ride.');
     els.sessionBtn.textContent = 'Stop Tracking';
@@ -2630,13 +2784,24 @@ if(paused){
     els.rideCard.style.display = 'block';
   }
 
+  // A ride that was just finished gets the lightweight floating card (with
+  // the share-as-image action). Opening a past ride from the logbook still
+  // gets the full bottom-sheet modal with the route map and playback.
   function openRideDetail(id, justFinished){
+    if(justFinished){
+      showFloatingRideCard(id);
+      return;
+    }
+    openRideDetailModal(id);
+  }
+
+  function openRideDetailModal(id){
     loadHistory().then(arr => {
       const entry = arr.find(e => e.id === id);
       if(!entry) return;
-      populateRideCard(entry, justFinished);
+      populateRideCard(entry, false);
       if(!entry.path || entry.path.length < 2){
-        showNoRoute(entry, justFinished);
+        showNoRoute(entry, false);
         return;
       }
       els.modalTitle.textContent = entry.note ? entry.note : (formatDate(entry.date) + ' Ride');
@@ -2660,6 +2825,307 @@ if(paused){
         maxDurationSec = entry.durationSec;
         setupScrubber();
       });
+    });
+  }
+
+  // ---------- floating post-ride card ----------
+  let currentFloatEntry = null;
+  let fcShareStyle = 'card'; // 'card' | 'transparent'
+
+  function setFcShareStyle(style){
+    fcShareStyle = style;
+    if(els.fcStyleCardBtn) els.fcStyleCardBtn.classList.toggle('active', style === 'card');
+    if(els.fcStyleTransparentBtn) els.fcStyleTransparentBtn.classList.toggle('active', style === 'transparent');
+  }
+
+  function populateFloatCard(entry){
+    currentFloatEntry = entry;
+    const maxV = Math.round(msToUnit(entry.maxMs));
+    const avgV = Math.round(msToUnit(entry.avgMs));
+    const dist = metersToDistUnit(entry.distanceM).toFixed(1);
+    const dUnit = distUnitLabel();
+    els.fcBadge.textContent = 'Ride complete';
+    els.fcDistance.textContent = dist;
+    els.fcDistUnit.textContent = dUnit.toUpperCase();
+    els.fcDuration.textContent = formatDuration(entry.durationSec);
+    els.fcAvg.innerHTML = `${avgV} <span class="rc-unit">km/h</span>`;
+    els.fcMax.innerHTML = `${maxV} <span class="rc-unit">km/h</span>`;
+    // Older saved rides won't have startDate — derive it from the end
+    // timestamp and duration so the row still shows something sensible.
+    const startTs = entry.startDate || (entry.date - entry.durationSec * 1000);
+    const endTs = entry.startDate ? entry.startDate + entry.durationSec * 1000 : entry.date;
+    els.fcTimeRange.textContent = `${formatTime(startTs)} – ${formatTime(endTs)}`;
+    const hasRoute = entry.path && entry.path.length >= 2;
+    els.fcViewRouteBtn.style.display = hasRoute ? '' : 'none';
+    if(els.fcStyleTransparentBtn) els.fcStyleTransparentBtn.disabled = !hasRoute;
+    setFcShareStyle('card'); // reset to the default each time the card opens
+  }
+
+  if(els.fcStyleCardBtn){
+    els.fcStyleCardBtn.addEventListener('click', ()=> setFcShareStyle('card'));
+  }
+  if(els.fcStyleTransparentBtn){
+    els.fcStyleTransparentBtn.addEventListener('click', ()=>{
+      if(els.fcStyleTransparentBtn.disabled) return;
+      setFcShareStyle('transparent');
+    });
+  }
+
+  function showFloatingRideCard(id){
+    loadHistory().then(arr => {
+      const entry = arr.find(e => e.id === id);
+      if(!entry) return;
+      populateFloatCard(entry);
+      els.floatCardBackdrop.classList.add('open');
+    });
+  }
+
+  function closeFloatCard(){
+    els.floatCardBackdrop.classList.remove('open');
+  }
+
+  if(els.floatCardClose) els.floatCardClose.addEventListener('click', closeFloatCard);
+  if(els.floatCardBackdrop){
+    els.floatCardBackdrop.addEventListener('click', (ev)=>{
+      if(ev.target === els.floatCardBackdrop) closeFloatCard();
+    });
+  }
+  if(els.fcViewRouteBtn){
+    els.fcViewRouteBtn.addEventListener('click', ()=>{
+      if(!currentFloatEntry) return;
+      const id = currentFloatEntry.id;
+      closeFloatCard();
+      openRideDetailModal(id);
+    });
+  }
+
+  // Draws the ride summary onto an offscreen canvas as a shareable image —
+  // rendered at a fixed dark theme regardless of the app's current theme so
+  // shared cards always look the same, and at 2x scale for crisp text on
+  // high-density phone screens.
+  function roundRectPath(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  // Projects lat/lon points into a pixel box, preserving the route's true
+  // shape by correcting for longitude compression at latitude (cos(midLat))
+  // rather than stretching it to fill the box.
+  function projectPath(path, x, y, w, h){
+    const lats = path.map(p => p.lat), lons = path.map(p => p.lon);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+    const midLat = (minLat + maxLat) / 2;
+    const lonScale = Math.cos(midLat * Math.PI / 180) || 1;
+    const dataW = Math.max((maxLon - minLon) * lonScale, 0.00008);
+    const dataH = Math.max(maxLat - minLat, 0.00008);
+    const scale = Math.min(w / dataW, h / dataH);
+    const drawW = dataW * scale, drawH = dataH * scale;
+    const offX = x + (w - drawW) / 2, offY = y + (h - drawH) / 2;
+    return path.map(p => [
+      offX + (p.lon - minLon) * lonScale * scale,
+      offY + (maxLat - p.lat) * scale, // invert lat so north is up
+    ]);
+  }
+
+  async function renderRideCardToBlob(info, style, path){
+    const scale = 2;
+    const W = 720 * scale, H = 900 * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const transparent = style === 'transparent' && path && path.length >= 2;
+
+    try{ await document.fonts.ready; }catch(e){}
+
+    if(!transparent){
+      const bg = ctx.createLinearGradient(0, 0, W, H);
+      bg.addColorStop(0, '#24282d');
+      bg.addColorStop(0.55, '#14161a');
+      bg.addColorStop(1, '#08090a');
+      ctx.fillStyle = bg;
+      roundRectPath(ctx, 0, 0, W, H, 42*scale);
+      ctx.fill();
+
+      const glow = ctx.createRadialGradient(W*0.86, H*0.05, 10, W*0.86, H*0.05, W*0.6);
+      glow.addColorStop(0, 'rgba(255,90,54,0.30)');
+      glow.addColorStop(1, 'rgba(255,90,54,0)');
+      ctx.fillStyle = glow;
+      roundRectPath(ctx, 0, 0, W, H, 42*scale);
+      ctx.fill();
+    }
+    // transparent mode: canvas starts fully transparent (default), nothing to paint here
+
+    const pad = 56*scale;
+
+    // Text drawn on a transparent background needs to stay legible over
+    // whatever photo it ends up composited on, so give it a soft dark
+    // shadow instead of relying on a solid card behind it.
+    if(transparent){
+      ctx.shadowColor = 'rgba(0,0,0,0.65)';
+      ctx.shadowBlur = 10*scale;
+      ctx.shadowOffsetY = 2*scale;
+    }
+
+    ctx.fillStyle = '#8a8f95';
+    ctx.font = `600 ${16*scale}px 'Oswald', sans-serif`;
+    ctx.fillText('VELOCITY LOG', pad, pad + 12*scale);
+
+    ctx.fillStyle = '#c9a44c';
+    ctx.font = `700 ${15*scale}px 'Space Mono', monospace`;
+    ctx.fillText('RIDE COMPLETE', pad, pad + 58*scale);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = transparent ? '#c7cbd0' : '#565a5f';
+    ctx.font = `${13*scale}px 'Space Mono', monospace`;
+    ctx.fillText(info.timeRangeStr, W - pad, pad + 58*scale);
+    ctx.textAlign = 'left';
+
+    let distanceY = H*0.42;
+    let boxY = H*0.58;
+
+    if(transparent){
+      // Route line takes the middle band; distance + stats shift down to make room.
+      const mapY = pad + 100*scale;
+      const mapH = H*0.32;
+      const pts = projectPath(path, pad, mapY, W - pad*2, mapH);
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = 16*scale;
+      ctx.shadowOffsetY = 0;
+      ctx.strokeStyle = '#ff5a36';
+      ctx.lineWidth = 8*scale;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      pts.forEach(([x,y], i) => i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y));
+      ctx.stroke();
+      ctx.restore();
+
+      const dot = (pt, color) => {
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(pt[0], pt[1], 10*scale, 0, Math.PI*2);
+        ctx.fill();
+        ctx.lineWidth = 3*scale;
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.stroke();
+      };
+      dot(pts[0], '#5fb88a');
+      dot(pts[pts.length-1], '#e0604a');
+
+      // restore text shadow (route drawing above overwrote shadow settings)
+      ctx.shadowColor = 'rgba(0,0,0,0.65)';
+      ctx.shadowBlur = 10*scale;
+      ctx.shadowOffsetY = 2*scale;
+
+      distanceY = mapY + mapH + 130*scale;
+      boxY = distanceY + 60*scale;
+    }
+
+    ctx.fillStyle = '#e9e5da';
+    ctx.font = `700 ${transparent ? 110*scale : 148*scale}px 'Space Mono', monospace`;
+    ctx.fillText(info.dist, pad, distanceY);
+    const distWidth = ctx.measureText(info.dist).width;
+    ctx.fillStyle = transparent ? '#d5d9dd' : '#8a8f95';
+    ctx.font = `500 ${28*scale}px 'Oswald', sans-serif`;
+    ctx.fillText(info.dUnit, pad + distWidth + 16*scale, distanceY);
+
+    const boxes = [
+      { label: 'DURATION', val: info.durationStr },
+      { label: 'AVG SPEED', val: `${info.avgV} km/h` },
+      { label: 'MAX SPEED', val: `${info.maxV} km/h` },
+    ];
+    const boxH = 130*scale;
+    const gap = 16*scale;
+    const boxW = (W - pad*2 - gap*2) / 3;
+
+    // Chips get a bigger dark backing in transparent mode since there's no
+    // card panel behind them to provide contrast against an arbitrary photo.
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    boxes.forEach((b, i) => {
+      const bx = pad + i*(boxW+gap);
+      ctx.fillStyle = transparent ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.045)';
+      roundRectPath(ctx, bx, boxY, boxW, boxH, 18*scale);
+      ctx.fill();
+      ctx.strokeStyle = transparent ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)';
+      ctx.lineWidth = 1*scale;
+      roundRectPath(ctx, bx, boxY, boxW, boxH, 18*scale);
+      ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = transparent ? '#c7cbd0' : '#565a5f';
+      ctx.font = `700 ${13*scale}px 'Space Mono', monospace`;
+      ctx.fillText(b.label, bx + boxW/2, boxY + 34*scale);
+
+      ctx.fillStyle = '#e9e5da';
+      ctx.font = `700 ${25*scale}px 'Space Mono', monospace`;
+      ctx.fillText(b.val, bx + boxW/2, boxY + 78*scale);
+      ctx.textAlign = 'left';
+    });
+
+    ctx.shadowColor = transparent ? 'rgba(0,0,0,0.65)' : 'transparent';
+    ctx.shadowBlur = transparent ? 10*scale : 0;
+    ctx.shadowOffsetY = transparent ? 2*scale : 0;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = transparent ? '#c7cbd0' : '#565a5f';
+    ctx.font = `${14*scale}px 'Space Mono', monospace`;
+    ctx.fillText('Logged with Velocity Log', W/2, H - pad*0.7);
+    ctx.textAlign = 'left';
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+  }
+
+  if(els.fcShareBtn){
+    els.fcShareBtn.addEventListener('click', async ()=>{
+      const entry = currentFloatEntry;
+      if(!entry) return;
+
+      const dist = metersToDistUnit(entry.distanceM).toFixed(1);
+      const dUnit = distUnitLabel().toUpperCase();
+      const avgV = Math.round(msToUnit(entry.avgMs));
+      const maxV = Math.round(msToUnit(entry.maxMs));
+      const durationStr = formatDuration(entry.durationSec);
+      const startTs = entry.startDate || (entry.date - entry.durationSec * 1000);
+      const endTs = entry.startDate ? entry.startDate + entry.durationSec * 1000 : entry.date;
+      const timeRangeStr = `${formatDate(entry.date)} · ${formatTime(startTs)}–${formatTime(endTs)}`;
+
+      const origLabel = els.fcShareBtn.innerHTML;
+      els.fcShareBtn.disabled = true;
+      els.fcShareBtn.textContent = 'Rendering…';
+
+      try{
+        const blob = await renderRideCardToBlob({ dist, dUnit, avgV, maxV, durationStr, timeRangeStr }, fcShareStyle, entry.path);
+        if(!blob) throw new Error('canvas produced no image');
+        const filename = `velocity-ride-${entry.id}${fcShareStyle === 'transparent' ? '-transparent' : ''}.png`;
+        const file = new File([blob], filename, { type: 'image/png' });
+
+        if(navigator.canShare && navigator.canShare({ files: [file] })){
+          await navigator.share({ files: [file], title: 'My Ride', text: 'Logged with Velocity Log' });
+        }else{
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = filename;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(()=>URL.revokeObjectURL(url), 4000);
+          showDataStatus('Ride image saved to your downloads.', false);
+        }
+      }catch(e){
+        if(!(e && e.name === 'AbortError')){ // AbortError = user cancelled the share sheet, not a real failure
+          console.error(e);
+          showDataStatus("Couldn't generate the ride image.", true);
+        }
+      }finally{
+        els.fcShareBtn.disabled = false;
+        els.fcShareBtn.innerHTML = origLabel;
+      }
     });
   }
 

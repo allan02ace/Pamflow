@@ -394,10 +394,34 @@ button{font-family:inherit; cursor:pointer;}
   width:22px; height:22px; display:flex; align-items:center; justify-content:center; overflow:hidden;
   font-weight:800; color:var(--accent); font-size:15px; line-height:1; pointer-events:none; z-index:1;
 }
-.amount-input input[type=number]{width:100%; padding-left:44px; font-family:'DM Mono'; font-size:18px; font-weight:700; letter-spacing:.2px;}
+.amount-input input[type=number]{width:100%; padding-left:44px; padding-right:44px; font-family:'DM Mono'; font-size:18px; font-weight:700; letter-spacing:.2px;}
 .amount-input input[type=number]::-webkit-outer-spin-button,
 .amount-input input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
 .amount-input input[type=number]{-moz-appearance:textfield;}
+.amount-input .calc-trigger{
+  position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  width:32px; height:32px; border-radius:10px; border:none;
+  background:var(--pink-bg); color:var(--accent); font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+}
+.amount-input .calc-trigger:active{transform:translateY(-50%) scale(0.9);}
+
+.calc-display{
+  background:#fff; border:2px solid var(--line); border-radius:16px; padding:14px 16px;
+  margin-bottom:14px; text-align:right; overflow:hidden;
+}
+.calc-display .calc-expr{font-size:13px; color:var(--ink-soft); font-weight:600; min-height:16px; word-break:break-all;}
+.calc-display .calc-result{font-family:'DM Mono'; font-size:30px; font-weight:700; color:var(--ink); margin-top:2px; word-break:break-all;}
+.calc-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+.calc-key{
+  border:none; background:#fff; border-radius:14px; padding:16px 0; font-size:18px; font-weight:800;
+  color:var(--ink); box-shadow: var(--shadow-xs);
+}
+.calc-key:active{transform:scale(0.94);}
+.calc-key.op{background:var(--pink-bg); color:var(--accent);}
+.calc-key.fn{background:var(--coral-soft); color:var(--coral);}
+.calc-key.eq{background:linear-gradient(135deg, var(--main), #8a1fb8); color:#fff;}
+.calc-key.zero{grid-column: span 2;}
 
 .seg{display:flex; background:#fff; border-radius:14px; padding:4px; border:2px solid var(--line);}
 .seg button{flex:1; border:none; background:none; padding:9px 4px; border-radius:11px; font-weight:800; font-size:12.5px; color:var(--ink-soft);}
@@ -630,9 +654,12 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
 [data-theme="dark"] .field select, [data-theme="dark"] .field textarea,
 [data-theme="dark"] .seg, [data-theme="dark"] .preset-item, [data-theme="dark"] .emoji-opt,
 [data-theme="dark"] .acc-opt, [data-theme="dark"] .logo-opt, [data-theme="dark"] .btn-secondary,
-[data-theme="dark"] .switch .track:before{
+[data-theme="dark"] .switch .track:before, [data-theme="dark"] .calc-display,
+[data-theme="dark"] .calc-key{
   background: var(--white);
 }
+[data-theme="dark"] .calc-key.op{ background: var(--pink-bg); }
+[data-theme="dark"] .calc-key.fn{ background: rgba(209,71,122,0.18); }
 [data-theme="dark"] .switch .track{ background: #3a2c46; }
 [data-theme="dark"] .stat-bar-track{ background: #3a2c46; }
 [data-theme="dark"] .data-banner{ background: rgba(232,178,61,0.14); border-color: rgba(232,178,61,0.35); color: #f0cd80; }
@@ -891,7 +918,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
 
     <div class="field">
       <label for="txn-amount">Amount</label>
-      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="txn-amount" aria-label="Transaction amount in Philippine pesos" placeholder="0.00"></div>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="txn-amount" aria-label="Transaction amount in Philippine pesos" placeholder="0.00"><button type="button" class="calc-trigger" onclick="openCalculator('txn-amount')" aria-label="Open calculator">🧮</button></div>
     </div>
 
     <div class="field" id="txn-classification-field">
@@ -1062,6 +1089,45 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
       <input type="date" id="realloc-date">
     </div>
     <button class="btn-primary" onclick="saveReallocate()">Move money</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Calculator ===== -->
+<div class="overlay" id="modal-calculator">
+  <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-calculator')" aria-label="Close calculator">✕</button>
+    <div class="sheet-handle"></div>
+    <h3>Calculator</h3>
+    <div class="calc-display">
+      <div class="calc-expr" id="calc-expr">&nbsp;</div>
+      <div class="calc-result" id="calc-result">0</div>
+    </div>
+    <div class="calc-grid">
+      <button type="button" class="calc-key fn" onclick="calcClear()">C</button>
+      <button type="button" class="calc-key fn" onclick="calcBackspace()">⌫</button>
+      <button type="button" class="calc-key op" onclick="calcInput('%')">%</button>
+      <button type="button" class="calc-key op" onclick="calcInput('÷')">÷</button>
+
+      <button type="button" class="calc-key" onclick="calcInput('7')">7</button>
+      <button type="button" class="calc-key" onclick="calcInput('8')">8</button>
+      <button type="button" class="calc-key" onclick="calcInput('9')">9</button>
+      <button type="button" class="calc-key op" onclick="calcInput('×')">×</button>
+
+      <button type="button" class="calc-key" onclick="calcInput('4')">4</button>
+      <button type="button" class="calc-key" onclick="calcInput('5')">5</button>
+      <button type="button" class="calc-key" onclick="calcInput('6')">6</button>
+      <button type="button" class="calc-key op" onclick="calcInput('-')">−</button>
+
+      <button type="button" class="calc-key" onclick="calcInput('1')">1</button>
+      <button type="button" class="calc-key" onclick="calcInput('2')">2</button>
+      <button type="button" class="calc-key" onclick="calcInput('3')">3</button>
+      <button type="button" class="calc-key op" onclick="calcInput('+')">+</button>
+
+      <button type="button" class="calc-key zero" onclick="calcInput('0')">0</button>
+      <button type="button" class="calc-key" onclick="calcInput('.')">.</button>
+      <button type="button" class="calc-key eq" onclick="calcEquals()">=</button>
+    </div>
+    <button class="btn-primary" onclick="useCalculatorResult()">Use this amount</button>
   </div>
 </div>
 
@@ -1401,6 +1467,12 @@ function go(view, accountId){
 
 /* ============ RENDER: HOME ============ */
 function render(){
+  // The total balance can change from actions taken on any view (adding a
+  // transaction from Account detail, editing one from the Transactions list,
+  // etc.), but Home is hidden unless it's the active view. Update its total
+  // here, on every render, so it's always current the instant the user taps
+  // back to Home instead of only refreshing when Home itself re-renders.
+  document.getElementById('home-total').textContent = peso(grandTotal());
   if(currentView==='home') renderHome();
   if(currentView==='txns') renderAllTxns();
   if(currentView==='account') renderAccountDetail();
@@ -1410,7 +1482,6 @@ function render(){
 }
 
 function renderHome(){
-  document.getElementById('home-total').textContent = peso(grandTotal());
   document.getElementById('home-sub').textContent = state.accounts.length === 0
     ? 'Add your first account to get started'
     : 'Your total balance';
@@ -1498,10 +1569,11 @@ function txnRowHTML(t, showAccountContext){
     const toLabel = groupSubLabel(acc, t.toGroupId, t.toSubgroupId);
     tag = (showAccountContext && acc ? acc.name+' · ' : '') + `${fromLabel} → ${toLabel}`;
   } else {
-    label = t.note || (t.type==='income'?'Income':'Expense');
+    const cls = t.classificationId ? getClassification(t.classificationId) : null;
+    label = t.note || (cls ? cls.name : (t.type==='income'?'Income':'Expense'));
     const g = acc && t.groupId ? findGroup(acc, t.groupId) : null;
     const sg = g && t.subgroupId ? (g.subgroups||[]).find(s=>s.id===t.subgroupId) : null;
-    tag = (showAccountContext && acc ? acc.name+' · ' : '') + (g ? g.name + (sg? ' / '+sg.name : '') : 'Main Balance');
+    tag = (showAccountContext && acc ? acc.name+' · ' : '') + (g ? g.name + (sg? ' / '+sg.name : '') : 'Main Balance') + (cls ? ' · '+cls.name : '');
   }
 
   return `<div class="txn-row">
@@ -2502,11 +2574,11 @@ function encodeGS(g,s){ return (g==null?'':g) + '|' + (s==null?'':s); }
 function decodeGS(v){ const parts = (v||'').split('|'); return { g: parts[0]===''?null:parts[0], s: parts[1]===''?null:parts[1] }; }
 
 function reallocOptionsHTML(acc, selectedValue){
-  let html = `<option value="${encodeGS(null,null)}">Main Balance</option>`;
+  let html = `<option value="${encodeGS(null,null)}">Main Balance (${peso(groupBalance(acc, null, undefined))})</option>`;
   (acc.groups||[]).forEach(g=>{
-    html += `<option value="${encodeGS(g.id,null)}">${escapeHtml(g.name)}</option>`;
+    html += `<option value="${encodeGS(g.id,null)}">${escapeHtml(g.name)} (${peso(groupBalance(acc, g.id, undefined))})</option>`;
     (g.subgroups||[]).forEach(s=>{
-      html += `<option value="${encodeGS(g.id,s.id)}">${escapeHtml(g.name)} / ${escapeHtml(s.name)}</option>`;
+      html += `<option value="${encodeGS(g.id,s.id)}">${escapeHtml(g.name)} / ${escapeHtml(s.name)} (${peso(groupBalance(acc, g.id, s.id))})</option>`;
     });
   });
   return html;
@@ -2542,6 +2614,108 @@ function saveReallocate(){
     date: document.getElementById('realloc-date').value || todayStr(), createdAt: Date.now()
   });
   saveState(); hideOverlay('modal-reallocate'); toast('Money moved'); renderAccountDetail();
+}
+
+/* ============ CALCULATOR ============ */
+// A small on-screen calculator for filling in the transaction amount field —
+// handy for totaling up a few items (e.g. "120+85+45") without leaving the
+// form to do the math elsewhere. Deliberately not eval(): expr is tokenized
+// and evaluated by hand so it can only ever contain digits and + - × ÷ %.
+let calcState = { expr:'', targetId:null };
+
+function openCalculator(targetId){
+  calcState.targetId = targetId;
+  const current = parseFloat(document.getElementById(targetId).value);
+  calcState.expr = (!isNaN(current) && current !== 0) ? String(current) : '';
+  updateCalcDisplay();
+  showOverlay('modal-calculator');
+}
+
+function calcTokenize(expr){
+  const tokens = [];
+  let num = '';
+  for(const ch of expr){
+    if('0123456789.'.includes(ch)){ num += ch; }
+    else{
+      if(num){ tokens.push(num); num = ''; }
+      tokens.push(ch);
+    }
+  }
+  if(num) tokens.push(num);
+  return tokens;
+}
+
+function calcEvaluate(expr){
+  if(!expr) return 0;
+  let tokens = calcTokenize(expr);
+  if(tokens.length && '+-×÷'.includes(tokens[tokens.length-1])) tokens = tokens.slice(0,-1);
+  if(!tokens.length) return 0;
+
+  // Postfix % — divide the number right before it by 100 (so "500×10%" reads
+  // naturally as "10% of 500").
+  const noPercent = [];
+  for(const t of tokens){
+    if(t==='%' && noPercent.length && !isNaN(parseFloat(noPercent[noPercent.length-1]))){
+      noPercent[noPercent.length-1] = String(parseFloat(noPercent[noPercent.length-1]) / 100);
+    } else noPercent.push(t);
+  }
+  tokens = noPercent;
+  if(!tokens.length) return 0;
+
+  // × and ÷ first, left to right.
+  const afterMulDiv = [tokens[0]];
+  for(let i=1; i<tokens.length; i+=2){
+    const op = tokens[i], next = tokens[i+1];
+    if(op==='×' || op==='÷'){
+      const left = parseFloat(afterMulDiv.pop()) || 0;
+      const right = parseFloat(next) || 0;
+      afterMulDiv.push(String(op==='×' ? left*right : (right===0 ? 0 : left/right)));
+    } else{
+      afterMulDiv.push(op, next);
+    }
+  }
+
+  // Then + and -, left to right.
+  let result = parseFloat(afterMulDiv[0]) || 0;
+  for(let i=1; i<afterMulDiv.length; i+=2){
+    const op = afterMulDiv[i], val = parseFloat(afterMulDiv[i+1]) || 0;
+    if(op==='+') result += val; else if(op==='-') result -= val;
+  }
+  return result;
+}
+
+function calcInput(val){
+  const isOp = '+-×÷%'.includes(val);
+  const last = calcState.expr.slice(-1);
+  if(isOp){
+    if(!calcState.expr) return; // can't start with an operator
+    if('+-×÷%'.includes(last)){ calcState.expr = calcState.expr.slice(0,-1) + val; updateCalcDisplay(); return; }
+  }
+  if(val==='.'){
+    const segments = calcState.expr.split(/[+\-×÷%]/);
+    if(segments[segments.length-1].includes('.')) return; // one decimal point per number
+  }
+  calcState.expr += val;
+  updateCalcDisplay();
+}
+function calcClear(){ calcState.expr = ''; updateCalcDisplay(); }
+function calcBackspace(){ calcState.expr = calcState.expr.slice(0,-1); updateCalcDisplay(); }
+function calcEquals(){
+  calcState.expr = calcFormat(calcEvaluate(calcState.expr));
+  updateCalcDisplay();
+}
+function calcFormat(n){
+  if(!isFinite(n)) return '0';
+  return String(Math.round((n + Number.EPSILON) * 100) / 100);
+}
+function updateCalcDisplay(){
+  document.getElementById('calc-expr').innerHTML = calcState.expr || '&nbsp;';
+  document.getElementById('calc-result').textContent = calcFormat(calcEvaluate(calcState.expr));
+}
+function useCalculatorResult(){
+  const result = calcEvaluate(calcState.expr);
+  if(calcState.targetId) document.getElementById(calcState.targetId).value = calcFormat(result);
+  hideOverlay('modal-calculator');
 }
 
 /* ============ SETTINGS ============ */

@@ -23,13 +23,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root{
-    --bg:#0e1012;
-    --panel:#1a1d21;
-    --panel-hi:#22262b;
-    --bezel:#2c3036;
-    --ink:#e9e5da;
+    --bg:#000000;
+    --panel:#000000;
+    --panel-hi:#0a0a0a;
+    --bezel:#050505;
+    --ink:#f2efe6;
     --ink-dim:#8a8f95;
-    --ink-faint:#565a5f;
+    --ink-faint:#4a4e53;
     --needle:#ff5a36;
     --needle-glow:rgba(255,90,54,0.35);
     --needle-gradient: linear-gradient(135deg, #ff8a5c 0%, var(--needle) 55%, #d6431f 100%);
@@ -37,7 +37,10 @@
     --good:#5fb88a;
     --danger:#e0604a;
     --danger-gradient: linear-gradient(135deg, #ef7a61 0%, var(--danger) 55%, #a83a26 100%);
-    --hairline:#2a2e33;
+    --hairline:#1a1a1a;
+    --gauge-orange:#ff8a1e;
+    --gauge-orange-dim:#7a4413;
+    --gauge-orange-glow:rgba(255,138,30,0.45);
     --ease-out:cubic-bezier(.16,1,.3,1);
     --ease-spring:cubic-bezier(.34,1.56,.64,1);
     --ease-standard:cubic-bezier(.4,0,.2,1);
@@ -67,8 +70,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:
-      radial-gradient(1200px 800px at 15% -10%, #24282d 0%, var(--bg) 45%, #08090a 100%);
+    background:#000000;
     color:var(--ink);
     transition:background .3s var(--ease-standard), color .3s var(--ease-standard);
     font-family:'Inter',sans-serif;
@@ -192,14 +194,21 @@
   }
   .map-flip-btn:active{transform:scale(0.88);}
   svg.dial{display:block; width:100%; height:100%;}
-  .tick-major{stroke:var(--ink-dim); stroke-width:2;}
-  .tick-minor{stroke:var(--ink-faint); stroke-width:1;}
+  .gauge-arc-band{
+    fill:none;
+    stroke:var(--gauge-orange);
+    stroke-width:3;
+    opacity:0.85;
+    filter: drop-shadow(0 0 4px var(--gauge-orange-glow));
+  }
+  .tick-major{stroke:var(--ink); stroke-width:2;}
+  .tick-minor{stroke:var(--gauge-orange-dim); stroke-width:1;}
   .tick-redline{stroke:var(--danger); stroke-width:2;}
   .tick-num{
     font-family:'Oswald',sans-serif;
-    font-weight:500;
+    font-weight:600;
     font-size:13px;
-    fill:var(--ink-dim);
+    fill:var(--ink);
     text-anchor:middle;
   }
   .needle{
@@ -210,21 +219,28 @@
     transition: transform .28s var(--ease-out);
     transform-origin: 150px 150px;
   }
-  .hub{fill:var(--panel-hi); stroke:var(--hairline); stroke-width:2;}
+  .hub{fill:#0a0a0a; stroke:var(--gauge-orange); stroke-width:2;}
   .hub-dot{fill:var(--needle);}
 
-  .readout{
+  .readout-overlay{
+    position:absolute;
+    left:50%;
+    top:58%;
+    transform:translate(-50%,-50%);
+    width:70%;
     text-align:center;
-    margin-top:-8px;
-    padding-bottom:6px;
+    pointer-events:none;
+    z-index:5;
   }
   .readout-num{
     font-family:'Space Mono',monospace;
     font-weight:700;
-    font-size:44px;
+    font-size:46px;
     line-height:1;
     letter-spacing:-0.01em;
     font-variant-numeric:tabular-nums;
+    color:var(--ink);
+    text-shadow:0 0 10px rgba(255,138,30,0.25);
     transition: opacity .3s var(--ease-standard);
   }
   .readout-num.stale{ opacity:.4; }
@@ -232,9 +248,14 @@
     font-family:'Space Mono',monospace;
     font-size:11px;
     letter-spacing:0.2em;
-    color:var(--ink-dim);
+    color:var(--gauge-orange);
     text-transform:uppercase;
-    margin-top:4px;
+    margin-top:2px;
+  }
+  .readout{
+    text-align:center;
+    padding-top:2px;
+    padding-bottom:6px;
   }
   .gps-status{
     font-family:'Space Mono',monospace;
@@ -723,7 +744,7 @@
     font-size:16px; cursor:pointer; padding:4px 2px 4px 6px; flex-shrink:0;
   }
   .fuel-entry-del:hover{color:var(--danger);}
-  .fuel-field.fuel-field-time{max-width:110px; flex:0 0 auto;}
+  .fuel-field.fuel-field-date{max-width:132px; flex:0 0 auto;}
 
   /* oil change tracker (reuses .fuel-* row/list styling above) */
   .oil-since{
@@ -1137,6 +1158,10 @@
       <div class="gauge-flip-inner" id="gaugeFlipInner">
         <div class="gauge-face gauge-flip-front">
           <svg class="dial" viewBox="0 0 300 190" id="dialSvg"></svg>
+          <div class="readout-overlay">
+            <div class="readout-num" id="readoutNum">0</div>
+            <div class="readout-unit" id="readoutUnit">KM/H</div>
+          </div>
         </div>
         <div class="gauge-face gauge-flip-back">
           <div id="liveMap"></div>
@@ -1145,8 +1170,6 @@
       </div>
     </div>
     <div class="readout">
-      <div class="readout-num" id="readoutNum">0</div>
-      <div class="readout-unit" id="readoutUnit">KM/H</div>
       <div class="gps-status"><span class="gps-dot" id="gpsDot"></span><span id="gpsStatusText">Idle</span></div>
       <div class="debug-panel" id="debugPanel">
         <div class="debug-row"><span class="debug-label">Device speed</span><span class="debug-val" id="dbgRawSpeed">–</span></div>
@@ -1252,9 +1275,9 @@
           <label for="litersInput">Liters added</label>
           <input type="number" inputmode="decimal" id="litersInput" placeholder="e.g. 32.5">
         </div>
-        <div class="fuel-field fuel-field-time">
-          <label for="fuelTimeInput">Time</label>
-          <input type="time" id="fuelTimeInput">
+        <div class="fuel-field fuel-field-date">
+          <label for="fuelDateInput">Date</label>
+          <input type="date" id="fuelDateInput">
         </div>
         <button class="fuel-add-btn" id="fuelAddBtn">Add</button>
       </div>
@@ -1658,7 +1681,7 @@ window.storage = (function () {
     oilActions: document.getElementById('oilActions'),
     odoInput: document.getElementById('odoInput'),
     litersInput: document.getElementById('litersInput'),
-    fuelTimeInput: document.getElementById('fuelTimeInput'),
+    fuelDateInput: document.getElementById('fuelDateInput'),
     fuelFullCheck: document.getElementById('fuelFullCheck'),
     fuelAddBtn: document.getElementById('fuelAddBtn'),
     fuelError: document.getElementById('fuelError'),
@@ -1706,7 +1729,7 @@ window.storage = (function () {
 
   // ---------- gauge drawing ----------
   const CX = 150, CY = 150, R = 118;
-  const START_ANGLE = -210; // degrees, gauge sweep
+  const START_ANGLE = -120; // degrees, gauge sweep — bottom-left (min) to bottom-right (max), through the top
   const SWEEP = 240;
 
   function maxScale(){ return 100; }
@@ -1751,8 +1774,15 @@ window.storage = (function () {
     const rimEnd = polar(CX, CY, R+6, START_ANGLE+SWEEP);
     const rim = `<path d="M ${rimStart.x.toFixed(1)} ${rimStart.y.toFixed(1)} A ${R+6} ${R+6} 0 1 1 ${rimEnd.x.toFixed(1)} ${rimEnd.y.toFixed(1)}" fill="none" stroke="var(--hairline)" stroke-width="1.5"/>`;
 
+    // orange arc band, echoing the Honda Beat gauge's ring
+    const bandR = R + 1;
+    const bandStart = polar(CX, CY, bandR, START_ANGLE);
+    const bandEnd = polar(CX, CY, bandR, START_ANGLE+SWEEP);
+    const band = `<path d="M ${bandStart.x.toFixed(1)} ${bandStart.y.toFixed(1)} A ${bandR} ${bandR} 0 1 1 ${bandEnd.x.toFixed(1)} ${bandEnd.y.toFixed(1)}" class="gauge-arc-band"/>`;
+
     svg.innerHTML = `
       ${rim}
+      ${band}
       ${ticks}
       <line id="needleLine" x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY-R+34}" class="needle"/>
       <circle cx="${CX}" cy="${CY}" r="16" class="hub"/>
@@ -3381,20 +3411,23 @@ if(paused){
     els.fuelError.style.display = msg ? 'block' : 'none';
   }
 
-  function currentTimeHHMM(){
+  function currentDateYYYYMMDD(){
     const d = new Date();
-    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
   }
-  // pre-fill the time field with "now" so a fill-up logged on the spot needs
-  // no extra input, while still letting the rider back-date the time of day
-  // when logging a fuel-up after the fact.
-  if(els.fuelTimeInput) els.fuelTimeInput.value = currentTimeHHMM();
+  // pre-fill the date field with today so a fill-up logged on the spot needs
+  // no extra input, while still letting the rider back-date a fuel-up that
+  // happened on an earlier day.
+  if(els.fuelDateInput) els.fuelDateInput.value = currentDateYYYYMMDD();
 
-  function timestampFromTimeInput(timeStr){
+  function timestampFromDateInput(dateStr){
     const now = new Date();
-    if(timeStr){
-      const [hh, mm] = timeStr.split(':').map(Number);
-      if(!Number.isNaN(hh) && !Number.isNaN(mm)) now.setHours(hh, mm, 0, 0);
+    if(dateStr){
+      const [y, m, d] = dateStr.split('-').map(Number);
+      if(!Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d)) now.setFullYear(y, m - 1, d);
     }
     return now.getTime();
   }
@@ -3412,14 +3445,14 @@ if(paused){
     }
 
     const arr = await loadFuel();
-    const date = timestampFromTimeInput(els.fuelTimeInput ? els.fuelTimeInput.value : '');
+    const date = timestampFromDateInput(els.fuelDateInput ? els.fuelDateInput.value : '');
     const entry = { id: Date.now().toString(36), date, odo, liters, full };
     arr.push(entry);
     arr.sort((a,b)=> a.odo - b.odo);
     await saveFuelArr(arr);
     els.odoInput.value = ''; els.litersInput.value = '';
     els.fuelFullCheck.checked = true;
-    if(els.fuelTimeInput) els.fuelTimeInput.value = currentTimeHHMM();
+    if(els.fuelDateInput) els.fuelDateInput.value = currentDateYYYYMMDD();
     renderFuel();
 
     // Let a host app embedding this page (e.g. PAMFlow) know a fuel entry was

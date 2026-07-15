@@ -312,6 +312,16 @@ button{font-family:inherit; cursor:pointer;}
   font-weight:700; font-size:12.5px; padding:7px 13px; border-radius:30px;
 }
 .chip.active{background:var(--main); color:#fff; border-color:var(--main);}
+.filterbar-sub{display:flex; gap:6px; overflow-x:auto; padding: 0 0 14px; scrollbar-width:none;}
+.filterbar-sub::-webkit-scrollbar{display:none;}
+.chip-class{
+  flex-shrink:0; border:1px solid var(--line); background:var(--white); color:var(--ink-soft);
+  font-weight:700; font-size:11.5px; padding:6px 12px 6px 10px; border-radius:30px;
+  display:flex; align-items:center; gap:5px;
+}
+.chip-class .dot{width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--ink-soft);}
+.chip-class.active{background:var(--main); color:#fff; border-color:var(--main);}
+.chip-class.active .dot{background:#fff;}
 
 /* ===== Modal ===== */
 .overlay{
@@ -705,6 +715,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
       <button class="icon-btn" style="width:34px;height:34px;font-size:15px;" onclick="go('recurring')" aria-label="Recurring transactions">🔁</button>
     </div>
     <div class="filterbar" id="txn-filter"></div>
+    <div class="filterbar-sub" id="txn-class-filter"></div>
     <div class="txn-list" id="txn-all-list"></div>
   </div>
 
@@ -774,6 +785,10 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     <div class="settings-row" style="background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:10px;">
       <div class="lbl">🙈 Hide amounts</div>
       <label class="switch"><input type="checkbox" id="settings-hide-amounts" aria-label="Hide amounts" onchange="toggleHideAmounts()"><span class="track"></span></label>
+    </div>
+    <div class="settings-row" style="background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:10px;">
+      <div class="lbl">🔊 Sound effects</div>
+      <label class="switch"><input type="checkbox" id="settings-sound-enabled" aria-label="Sound effects" onchange="toggleSoundEnabled()"><span class="track"></span></label>
     </div>
     <div style="margin-bottom:16px;">
       <div class="lbl" style="font-weight:800; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;">🌙 Appearance</div>
@@ -1172,7 +1187,7 @@ function defaultState(){
     transactions: [],
     recurring: [],
     classifications: defaultClassifications(),
-    settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [], userName: '', hideAmounts: false, theme: 'system' }
+    settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [], userName: '', hideAmounts: false, theme: 'system', soundEnabled: true }
   };
 }
 let state = defaultState();
@@ -1193,6 +1208,7 @@ const SETTINGS_SCHEMA = {
   userName:          { type:'string',  default:()=>'' },
   hideAmounts:       { type:'boolean', default:()=>false },
   theme:             { type:'string',  default:()=>'system' },
+  soundEnabled:      { type:'boolean', default:()=>true },
 };
 
 // Brings any saved state (however old) up to the current shape. Safe to run on
@@ -1530,14 +1546,33 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':
 
 /* ============ RENDER: ALL TRANSACTIONS ============ */
 let txnFilterAccount = 'all';
+let txnFilterClass = 'all';
 function renderAllTxns(){
   const bar = document.getElementById('txn-filter');
   bar.innerHTML = `<button class="chip ${txnFilterAccount==='all'?'active':''}" onclick="setTxnFilter('all')">All</button>` +
     state.accounts.map(a=>`<button class="chip ${txnFilterAccount===a.id?'active':''}" onclick="setTxnFilter('${a.id}')">${a.icon} ${escapeHtml(a.name)}</button>`).join('');
 
+  // Second row: filter by classification. Only offer classifications that
+  // are actually in use, so the row doesn't fill up with empty categories.
+  const classBar = document.getElementById('txn-class-filter');
+  const usedClassIds = new Set(state.transactions.map(t=>t.classificationId).filter(Boolean));
+  const usedClasses = state.classifications.filter(c=>usedClassIds.has(c.id));
+  if(usedClasses.length === 0){
+    classBar.style.display = 'none';
+    classBar.innerHTML = '';
+    if(txnFilterClass !== 'all') txnFilterClass = 'all';
+  } else {
+    classBar.style.display = '';
+    classBar.innerHTML = `<button class="chip-class ${txnFilterClass==='all'?'active':''}" onclick="setTxnClassFilter('all')"><span class="dot" style="background:var(--main)"></span>All</button>` +
+      usedClasses.map(c=>`<button class="chip-class ${txnFilterClass===c.id?'active':''}" onclick="setTxnClassFilter('${c.id}')"><span class="dot" style="background:${c.type==='income'?'var(--color-success)':'var(--color-danger)'}"></span>${escapeHtml(c.name)}</button>`).join('');
+  }
+
   let list = [...state.transactions];
   if(txnFilterAccount !== 'all'){
     list = list.filter(t=> t.accountId===txnFilterAccount || t.fromAccountId===txnFilterAccount || t.toAccountId===txnFilterAccount);
+  }
+  if(txnFilterClass !== 'all'){
+    list = list.filter(t=> t.classificationId === txnFilterClass);
   }
   list.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || b.createdAt - a.createdAt);
 
@@ -1549,6 +1584,7 @@ function renderAllTxns(){
   el.innerHTML = list.map(t=>txnRowHTML(t, true)).join('');
 }
 function setTxnFilter(id){ txnFilterAccount = id; renderAllTxns(); }
+function setTxnClassFilter(id){ txnFilterClass = id; renderAllTxns(); }
 
 function txnRowHTML(t, showAccountContext){
   let icon, cls, sign, amtClass, label, tag;
@@ -2269,6 +2305,7 @@ function saveTxn(){
     if(ok){
       haptic('medium');
       toast(isEdit ? 'Transaction updated' : 'Transaction added', { label:'Undo', onClick: undo });
+      if(!isEdit && updated.type==='income') playIncomeSound();
     }
   });
 }
@@ -2616,7 +2653,23 @@ function saveReallocate(){
   saveState(); hideOverlay('modal-reallocate'); toast('Money moved'); renderAccountDetail();
 }
 
-/* ============ CALCULATOR ============ */
+/* ============ SOUND EFFECTS ============ */
+// Plays a sound file when a new income transaction is saved.
+// Drop your sound file in the same folder as index.html and name it
+// "income-sound.mp3" (or change the filename below to match yours —
+// .mp3, .wav, and .ogg all work).
+const INCOME_SOUND_SRC = './income-sound.mp3';
+let _incomeAudio = null;
+function playIncomeSound(){
+  if(!state.settings || !state.settings.soundEnabled) return;
+  try{
+    if(!_incomeAudio) _incomeAudio = new Audio(INCOME_SOUND_SRC);
+    _incomeAudio.currentTime = 0;
+    _incomeAudio.play().catch(()=>{ /* autoplay blocked or file missing — fail silently */ });
+  }catch(e){ /* fail silently, sound is decorative */ }
+}
+
+
 // A small on-screen calculator for filling in the transaction amount field —
 // handy for totaling up a few items (e.g. "120+85+45") without leaving the
 // form to do the math elsewhere. Deliberately not eval(): expr is tokenized
@@ -2736,6 +2789,8 @@ function renderClassificationSettings(){
 }
 function renderSettings(){
   applyHideAmountsUI();
+  const soundSw = document.getElementById('settings-sound-enabled');
+  if(soundSw) soundSw.checked = !!state.settings.soundEnabled;
   renderThemeSeg();
   renderLastBackupNote();
   const nameInput = document.getElementById('settings-username');
@@ -2822,6 +2877,13 @@ function toggleHideAmounts(){
   saveState();
   applyHideAmountsUI();
   render();
+}
+function toggleSoundEnabled(){
+  state.settings.soundEnabled = !state.settings.soundEnabled;
+  saveState();
+  const sw = document.getElementById('settings-sound-enabled');
+  if(sw) sw.checked = state.settings.soundEnabled;
+  if(state.settings.soundEnabled) playIncomeSound(); // quick preview so the toggle is self-explanatory
 }
 function applyHideAmountsUI(){
   const hidden = state.settings.hideAmounts;
@@ -3023,7 +3085,7 @@ function runWithBusy(buttonId, work, minDelay = 220){
   app.addEventListener('touchstart', e=>{
     if(e.touches.length !== 1) return;
     // Don't hijack horizontal scrolling inside the filter chip bar.
-    if(e.target.closest('.filterbar, .acc-select-grid, .emoji-row, .logo-row')) { tracking = false; return; }
+    if(e.target.closest('.filterbar, .filterbar-sub, .acc-select-grid, .emoji-row, .logo-row')) { tracking = false; return; }
     startX = e.touches[0].clientX; startY = e.touches[0].clientY; tracking = true;
   }, { passive:true });
   app.addEventListener('touchend', e=>{

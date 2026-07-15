@@ -140,7 +140,7 @@
   .gauge-flip-inner{
     position:relative;
     width:100%;
-    aspect-ratio:300/190;
+    aspect-ratio:300/234;
   }
   .gauge-flip-front,.gauge-flip-back{
     position:absolute; inset:0;
@@ -217,40 +217,45 @@
     stroke-linecap:round;
     filter: drop-shadow(0 0 6px var(--needle-glow));
     transition: transform .28s var(--ease-out);
-    transform-origin: 150px 150px;
+    transform-origin: 150px 160px;
   }
   .hub{fill:#0a0a0a; stroke:var(--gauge-orange); stroke-width:2;}
   .hub-dot{fill:var(--needle);}
 
-  .readout-overlay{
+  .readout-num{
     position:absolute;
     left:50%;
-    top:58%;
+    top:44%;
     transform:translate(-50%,-50%);
     width:70%;
-    text-align:center;
     pointer-events:none;
     z-index:5;
-  }
-  .readout-num{
     font-family:'Space Mono',monospace;
     font-weight:700;
-    font-size:46px;
+    font-size:52px;
     line-height:1;
     letter-spacing:-0.01em;
     font-variant-numeric:tabular-nums;
     color:var(--ink);
+    text-align:center;
     text-shadow:0 0 10px rgba(255,138,30,0.25);
     transition: opacity .3s var(--ease-standard);
   }
   .readout-num.stale{ opacity:.4; }
   .readout-unit{
+    position:absolute;
+    left:50%;
+    top:79%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    z-index:5;
     font-family:'Space Mono',monospace;
     font-size:11px;
     letter-spacing:0.2em;
     color:var(--gauge-orange);
     text-transform:uppercase;
-    margin-top:2px;
+    text-align:center;
+    white-space:nowrap;
   }
   .readout{
     text-align:center;
@@ -350,6 +355,16 @@
   }
   .entry-note-input:focus{border-bottom-color:var(--gold); color:var(--ink);}
   .entry-note-input::placeholder{color:var(--ink-faint);}
+  .entry-note-display{
+    margin-top:6px;
+    font-size:11px;
+    color:var(--ink-dim);
+    font-style:italic;
+    line-height:1.4;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
 
   /* weekly summary card */
   .weekly-card{
@@ -574,10 +589,6 @@
 
   /* history / logbook */
   .logbook{margin-top:26px;}
-  .logbook-header{
-    display:flex; justify-content:space-between; align-items:baseline;
-    margin-bottom:10px;
-  }
   .logbook-title{
     font-family:'Oswald',sans-serif;
     font-weight:600;
@@ -651,9 +662,14 @@
   .empty-state .glyph{font-size:26px; display:block; margin-bottom:8px; opacity:.6;}
 
   /* logbook header actions */
-  .logbook-actions{display:flex; align-items:center; gap:14px;}
+  .logbook-header{
+    display:flex; justify-content:space-between; align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .logbook-header-actions{display:flex; align-items:center; gap:10px; flex-shrink:0;}
 
-  /* section tabs */
+  /* section tabs — pill row */
   .section-tabs{
     display:flex; gap:4px; background:var(--panel-hi); border:1px solid var(--hairline);
     border-radius:10px; padding:3px;
@@ -666,6 +682,33 @@
   .section-tab.active{background:var(--needle-gradient); color:#1a0d08;}
   .section-tab:not(.active):hover{color:var(--ink);}
   .section-tab:active{transform:scale(0.94);}
+
+  .more-btn{
+    font-family:'Space Mono',monospace;
+    font-size:14px;
+    color:var(--ink-faint);
+    background:var(--panel-hi); border:1px solid var(--hairline);
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition:color .2s var(--ease-standard), border-color .2s var(--ease-standard), transform .15s var(--ease-spring);
+  }
+  .more-btn:hover{color:var(--ink); border-color:var(--ink-faint);}
+  .more-btn:active{transform:scale(0.88);}
+  .more-btn.open{color:var(--gauge-orange); border-color:var(--gauge-orange);}
+
+  /* collapsible actions panel (Clear all / Import) */
+  .more-menu{
+    display:none;
+    align-items:center;
+    gap:14px;
+    background:var(--panel-hi);
+    border:1px solid var(--hairline);
+    border-radius:12px;
+    padding:10px 14px;
+    margin-bottom:10px;
+  }
+  .more-menu.open{display:flex; animation:fade-in-up .2s var(--ease-out);}
 
   /* fuel tracker */
   .fuel-form{
@@ -1157,11 +1200,9 @@
       <button class="map-flip-btn" id="mapFlipBtn" title="Flip to map">🗺</button>
       <div class="gauge-flip-inner" id="gaugeFlipInner">
         <div class="gauge-face gauge-flip-front">
-          <svg class="dial" viewBox="0 0 300 190" id="dialSvg"></svg>
-          <div class="readout-overlay">
-            <div class="readout-num" id="readoutNum">0</div>
-            <div class="readout-unit" id="readoutUnit">KM/H</div>
-          </div>
+          <svg class="dial" viewBox="0 0 300 234" id="dialSvg"></svg>
+          <div class="readout-num" id="readoutNum">0</div>
+          <div class="readout-unit" id="readoutUnit">KM/H</div>
         </div>
         <div class="gauge-face gauge-flip-back">
           <div id="liveMap"></div>
@@ -1235,22 +1276,21 @@
         <button class="section-tab" id="tabFuel">Fuel</button>
         <button class="section-tab" id="tabOil">Oil</button>
       </div>
-      <div class="logbook-actions" id="ridesActions">
+      <div class="logbook-header-actions">
         <button class="compare-toggle" id="compareToggle">Compare</button>
-        <button class="clear-all" id="clearAll">Clear all</button>
-      </div>
-      <div class="logbook-actions" id="fuelActions" style="display:none;">
-        <button class="clear-all" id="fuelClearAll">Clear all</button>
-      </div>
-      <div class="logbook-actions" id="oilActions" style="display:none;">
-        <button class="clear-all" id="oilClearAll">Clear all</button>
-      </div>
-      <div class="data-actions">
         <button class="data-btn" id="exportBtn">Export</button>
-        <button class="data-btn" id="importBtn">Import</button>
-        <input type="file" id="importFile" accept="application/json" style="display:none;">
+        <button class="more-btn" id="tabMore" title="More">⋯</button>
       </div>
     </div>
+
+    <div class="more-menu" id="moreMenu">
+      <button class="clear-all" id="clearAll">Clear all</button>
+      <button class="clear-all" id="fuelClearAll" style="display:none;">Clear all</button>
+      <button class="clear-all" id="oilClearAll" style="display:none;">Clear all</button>
+      <button class="data-btn" id="importBtn">Import</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+    </div>
+
     <div class="data-status" id="dataStatus"></div>
 
     <div id="ridesSection">
@@ -1673,12 +1713,11 @@ window.storage = (function () {
     tabRides: document.getElementById('tabRides'),
     tabFuel: document.getElementById('tabFuel'),
     tabOil: document.getElementById('tabOil'),
+    tabMore: document.getElementById('tabMore'),
+    moreMenu: document.getElementById('moreMenu'),
     ridesSection: document.getElementById('ridesSection'),
     fuelSection: document.getElementById('fuelSection'),
     oilSection: document.getElementById('oilSection'),
-    ridesActions: document.getElementById('ridesActions'),
-    fuelActions: document.getElementById('fuelActions'),
-    oilActions: document.getElementById('oilActions'),
     odoInput: document.getElementById('odoInput'),
     litersInput: document.getElementById('litersInput'),
     fuelDateInput: document.getElementById('fuelDateInput'),
@@ -1728,7 +1767,7 @@ window.storage = (function () {
   };
 
   // ---------- gauge drawing ----------
-  const CX = 150, CY = 150, R = 118;
+  const CX = 150, CY = 160, R = 138;
   const START_ANGLE = -120; // degrees, gauge sweep — bottom-left (min) to bottom-right (max), through the top
   const SWEEP = 240;
 
@@ -1758,7 +1797,7 @@ window.storage = (function () {
       const isMajor = Math.round(v * 100) % Math.round(major*100) === 0;
       const angle = valueToAngle(v);
       const outer = R;
-      const inner = isMajor ? R - 14 : R - 8;
+      const inner = isMajor ? R - 16 : R - 10;
       const p1 = polar(CX, CY, outer, angle);
       const p2 = polar(CX, CY, inner, angle);
       const cls = v >= redline ? 'tick-redline' : (isMajor ? 'tick-major' : 'tick-minor');
@@ -1785,8 +1824,8 @@ window.storage = (function () {
       ${band}
       ${ticks}
       <line id="needleLine" x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY-R+34}" class="needle"/>
-      <circle cx="${CX}" cy="${CY}" r="16" class="hub"/>
-      <circle cx="${CX}" cy="${CY}" r="4" class="hub-dot"/>
+      <circle cx="${CX}" cy="${CY}" r="18" class="hub"/>
+      <circle cx="${CX}" cy="${CY}" r="5" class="hub-dot"/>
     `;
     setNeedle(0);
   }
@@ -2543,6 +2582,10 @@ if(paused){
     els.weekAvg.textContent = Math.round(msToUnit(avgMs));
   }
 
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
   async function renderHistory(){
     const arr = await loadHistory();
     if(!arr.length){
@@ -2565,7 +2608,9 @@ if(paused){
           <div class="entry-main">
             <div class="entry-max">${maxV} <span style="font-size:11px;color:var(--ink-dim);font-weight:400;">${u} max</span></div>
             <div class="entry-sub">${dist} ${dUnit} · ${formatDuration(e.durationSec)} · avg ${avgV} ${u}${(!e.path || e.path.length < 2) ? ' · no route saved' : ''}</div>
-            ${!compareMode ? `<div class="entry-note-wrap"><input class="entry-note-input" data-id="${e.id}" placeholder="Add a note…" value="${(e.note || '').replace(/"/g,'&quot;')}"></div>` : ''}
+            ${!compareMode
+              ? `<div class="entry-note-wrap"><input class="entry-note-input" data-id="${e.id}" placeholder="Add a note…" value="${(e.note || '').replace(/"/g,'&quot;')}"></div>`
+              : (e.note ? `<div class="entry-note-display">${escapeHtml(e.note)}</div>` : '')}
           </div>
           ${!compareMode ? `<button class="entry-del" data-id="${e.id}" title="Delete">✕</button>` : ''}
         </div>
@@ -3164,8 +3209,8 @@ if(paused){
     if(els.rideCard) els.rideCard.style.display = 'none';
     els.modalLegend.style.display = 'flex';
     els.modalLegend.innerHTML = `
-      <div class="legend-item"><span class="legend-swatch" style="background:#ff5a36;"></span>${formatDate(a.date)}</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#c9a44c; opacity:.55;"></span>${formatDate(b.date)}</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#ff5a36;"></span>${formatDate(a.date)} · ${formatTime(a.date)}</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#c9a44c; opacity:.55;"></span>${formatDate(b.date)} · ${formatTime(b.date)}</div>
     `;
     els.playbackPanel.style.display = (a.path && a.path.length>1) || (b.path && b.path.length>1) ? 'block' : 'none';
     els.modalBackdrop.classList.add('open');
@@ -3286,15 +3331,18 @@ if(paused){
     els.ridesSection.style.display = tab === 'rides' ? 'block' : 'none';
     els.fuelSection.style.display = tab === 'fuel' ? 'block' : 'none';
     els.oilSection.style.display = tab === 'oil' ? 'block' : 'none';
-    els.ridesActions.style.display = tab === 'rides' ? 'flex' : 'none';
-    els.fuelActions.style.display = tab === 'fuel' ? 'flex' : 'none';
-    els.oilActions.style.display = tab === 'oil' ? 'flex' : 'none';
+    els.compareToggle.style.display = tab === 'rides' ? '' : 'none';
+    els.clearAll.style.display = tab === 'rides' ? '' : 'none';
+    els.fuelClearAll.style.display = tab === 'fuel' ? '' : 'none';
+    els.oilClearAll.style.display = tab === 'oil' ? '' : 'none';
   }
   els.tabRides.addEventListener('click', ()=>{
     setActiveTab('rides');
+    closeMoreMenu();
   });
   els.tabFuel.addEventListener('click', async ()=>{
     setActiveTab('fuel');
+    closeMoreMenu();
     if(compareMode){ compareMode = false; compareSelection = []; els.compareToggle.classList.remove('active'); renderHistory(); }
     if(tankCapacityL === null){
       tankCapacityL = await loadTankCapacity();
@@ -3307,8 +3355,26 @@ if(paused){
   });
   els.tabOil.addEventListener('click', async ()=>{
     setActiveTab('oil');
+    closeMoreMenu();
     if(compareMode){ compareMode = false; compareSelection = []; els.compareToggle.classList.remove('active'); renderHistory(); }
     renderOil();
+  });
+
+  // ---------- more menu (Compare / Clear all / Export / Import) ----------
+  function closeMoreMenu(){
+    els.moreMenu.classList.remove('open');
+    els.tabMore.classList.remove('open');
+  }
+  els.tabMore.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const willOpen = !els.moreMenu.classList.contains('open');
+    els.moreMenu.classList.toggle('open', willOpen);
+    els.tabMore.classList.toggle('open', willOpen);
+  });
+  document.addEventListener('click', (e)=>{
+    if(!els.moreMenu.classList.contains('open')) return;
+    if(els.moreMenu.contains(e.target) || els.tabMore.contains(e.target)) return;
+    closeMoreMenu();
   });
 
   // ---------- tank capacity ----------

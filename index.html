@@ -85,7 +85,8 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
-*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+*{box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none; -webkit-user-select:none;}
+input, textarea, select{user-select:text; -webkit-user-select:text;}
 html,body{margin:0;padding:0;height:100%;}
 body{
   font-family:'Nunito', sans-serif;
@@ -1024,7 +1025,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
 
     <div class="field">
       <label id="receivable-account-label">Fund source</label>
-      <span class="field-hint">The bank account the money is coming from.</span>
+      <span class="field-hint">The bank account the money is coming from. Pick "No account" for existing debts you're just now logging.</span>
       <div class="acc-select-grid" id="receivable-account-grid" role="group" aria-labelledby="receivable-account-label"></div>
     </div>
 
@@ -1056,7 +1057,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
 
     <div class="field">
       <label id="payable-account-label">Fund destination</label>
-      <span class="field-hint">The bank account the borrowed money went into.</span>
+      <span class="field-hint">The bank account the borrowed money went into. Pick "No account" for existing debts you're just now logging.</span>
       <div class="acc-select-grid" id="payable-account-grid" role="group" aria-labelledby="payable-account-label"></div>
     </div>
 
@@ -2060,6 +2061,11 @@ function renderArap(){
   renderPayables();
 }
 
+function accountLabel(id){
+  if(!id) return 'Not linked';
+  const acc = getAccount(id);
+  return acc ? acc.name : 'Deleted account';
+}
 function renderReceivables(){
   const wrap = document.getElementById('arap-receivable-list');
   if(state.receivables.length===0){
@@ -2067,8 +2073,7 @@ function renderReceivables(){
     return;
   }
   wrap.innerHTML = [...state.receivables].sort((a,b)=> b.date.localeCompare(a.date)).map(r=>{
-    const acc = getAccount(r.accountId);
-    const accName = acc ? acc.name : 'Deleted account';
+    const accName = accountLabel(r.accountId);
     const remaining = remainingAmount(r);
     return `<div class="txn-row">
       <div class="txn-ic transfer">🧾</div>
@@ -2089,8 +2094,8 @@ function settlementHistoryHtml(item){
   const settlements = getSettlements(item);
   if(!settlements.length) return '';
   return settlements.map(s=>{
-    const acc = getAccount(s.accountId);
-    const accName = acc ? acc.name : 'Deleted account';
+    const accName = accountLabel(s.accountId);
+    const acc = s.accountId ? getAccount(s.accountId) : null;
     const label = groupSubLabel(acc || {groups:[]}, s.groupId, s.subgroupId);
     return `<div class="txn-tag"><span style="color:var(--color-success);">✓</span> ${peso(s.amount)} · ${escapeHtml(accName)}${label && label!=='Main Balance' ? ' / '+escapeHtml(label) : ''}</div>`;
   }).join('');
@@ -2107,19 +2112,21 @@ function openReceivableModal(){
 }
 function renderReceivableAccGrid(){
   const grid = document.getElementById('receivable-account-grid');
-  grid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${receivableModalState.accountId===a.id?'active':''}" onclick="pickReceivableAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+  const noneActive = receivableModalState.accountId===null;
+  let html = `<div class="acc-opt ${noneActive?'active':''}" onclick="pickReceivableAccount(null)"><div class="av" style="background:var(--ink-soft);">🚫</div><div class="info"><span class="name">No account</span><span class="bal">Not linked — won't affect balances</span></div></div>`;
+  html += state.accounts.map(a=>`<div class="acc-opt ${receivableModalState.accountId===a.id?'active':''}" onclick="pickReceivableAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+  grid.innerHTML = html;
 }
 function pickReceivableAccount(id){ receivableModalState.accountId = id; renderReceivableAccGrid(); }
 function saveReceivable(){
   const borrower = document.getElementById('receivable-borrower').value.trim();
   const amount = parseFloat(document.getElementById('receivable-amount').value);
   const note = document.getElementById('receivable-note').value.trim();
-  if(!receivableModalState.accountId){ toast('Pick a fund source'); return; }
   if(!borrower){ toast('Enter who the money is going to'); return; }
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
   state.receivables.push({
     id: uid(),
-    accountId: receivableModalState.accountId,
+    accountId: receivableModalState.accountId || null,
     borrower,
     amount,
     note,
@@ -2140,8 +2147,7 @@ function renderPayables(){
     return;
   }
   wrap.innerHTML = [...state.payables].sort((a,b)=> b.date.localeCompare(a.date)).map(p=>{
-    const acc = getAccount(p.accountId);
-    const accName = acc ? acc.name : 'Deleted account';
+    const accName = accountLabel(p.accountId);
     const remaining = remainingAmount(p);
     return `<div class="txn-row">
       <div class="txn-ic transfer">🧾</div>
@@ -2170,19 +2176,21 @@ function openPayableModal(){
 }
 function renderPayableAccGrid(){
   const grid = document.getElementById('payable-account-grid');
-  grid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${payableModalState.accountId===a.id?'active':''}" onclick="pickPayableAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+  const noneActive = payableModalState.accountId===null;
+  let html = `<div class="acc-opt ${noneActive?'active':''}" onclick="pickPayableAccount(null)"><div class="av" style="background:var(--ink-soft);">🚫</div><div class="info"><span class="name">No account</span><span class="bal">Not linked — won't affect balances</span></div></div>`;
+  html += state.accounts.map(a=>`<div class="acc-opt ${payableModalState.accountId===a.id?'active':''}" onclick="pickPayableAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+  grid.innerHTML = html;
 }
 function pickPayableAccount(id){ payableModalState.accountId = id; renderPayableAccGrid(); }
 function savePayable(){
   const lender = document.getElementById('payable-lender').value.trim();
   const amount = parseFloat(document.getElementById('payable-amount').value);
   const note = document.getElementById('payable-note').value.trim();
-  if(!payableModalState.accountId){ toast('Pick a fund destination'); return; }
   if(!lender){ toast('Enter who you owe the money to'); return; }
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
   state.payables.push({
     id: uid(),
-    accountId: payableModalState.accountId,
+    accountId: payableModalState.accountId || null,
     lender,
     amount,
     note,
@@ -2227,7 +2235,10 @@ function openSettleModal(kind, itemId){
 }
 function renderSettleAccGrid(){
   const grid = document.getElementById('settle-account-grid');
-  grid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${settleModalState.accountId===a.id?'active':''}" onclick="pickSettleAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+  const noneActive = settleModalState.accountId===null;
+  let html = `<div class="acc-opt ${noneActive?'active':''}" onclick="pickSettleAccount(null)"><div class="av" style="background:var(--ink-soft);">🚫</div><div class="info"><span class="name">No account</span><span class="bal">Not linked — won't affect balances</span></div></div>`;
+  html += state.accounts.map(a=>`<div class="acc-opt ${settleModalState.accountId===a.id?'active':''}" onclick="pickSettleAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+  grid.innerHTML = html;
 }
 function pickSettleAccount(id){
   settleModalState.accountId = id;
@@ -2238,6 +2249,13 @@ function pickSettleAccount(id){
 }
 function renderSettleGroupSelect(){
   const acc = getAccount(settleModalState.accountId);
+  const groupField = document.getElementById('settle-group-field');
+  if(!settleModalState.accountId){
+    groupField.style.display = 'none';
+    document.getElementById('settle-subgroup-field').style.display = 'none';
+    return;
+  }
+  groupField.style.display = 'block';
   const gsel = document.getElementById('settle-group-select');
   const groups = acc ? (acc.groups||[]) : [];
   gsel.innerHTML = '<option value="">Main Balance</option>' + groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
@@ -2284,7 +2302,6 @@ function renderSettleSubgroupSelect(){
 function confirmSettle(){
   const item = currentSettleItem();
   if(!item) return;
-  if(!settleModalState.accountId){ toast('Pick an account'); return; }
   const remaining = remainingAmount(item);
   const amount = parseFloat(document.getElementById('settle-amount').value);
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
@@ -2294,7 +2311,7 @@ function confirmSettle(){
   delete item.settled;
   item.settlements.push({
     id: uid(),
-    accountId: settleModalState.accountId,
+    accountId: settleModalState.accountId || null,
     groupId: settleModalState.groupId || null,
     subgroupId: settleModalState.subgroupId || null,
     amount,

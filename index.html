@@ -735,6 +735,35 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     <div class="txn-list" id="txn-all-list"></div>
   </div>
 
+  <!-- AR & AP -->
+  <div class="view hidden" id="view-arap">
+    <div class="section-head" style="margin-top:4px;">
+      <h2>AR & AP</h2>
+    </div>
+    <div class="field">
+      <div class="seg" id="arap-type-seg">
+        <button data-v="receivable" class="active">Receivable</button>
+        <button data-v="payable">Payable</button>
+      </div>
+    </div>
+
+    <div id="arap-receivable-section">
+      <div class="section-head">
+        <h2>Accounts Receivable</h2>
+        <button class="icon-btn" style="width:34px;height:34px;font-size:18px;" onclick="openReceivableModal()" aria-label="Add receivable">+</button>
+      </div>
+      <div class="txn-list" id="arap-receivable-list"></div>
+    </div>
+
+    <div id="arap-payable-section" style="display:none;">
+      <div class="section-head">
+        <h2>Accounts Payable</h2>
+        <button class="icon-btn" style="width:34px;height:34px;font-size:18px;" onclick="openPayableModal()" aria-label="Add payable">+</button>
+      </div>
+      <div class="txn-list" id="arap-payable-list"></div>
+    </div>
+  </div>
+
   <!-- RECURRING -->
   <div class="view hidden" id="view-recurring">
     <div class="acc-header">
@@ -845,6 +874,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
 
   <div class="bottomnav">
     <button class="navbtn active" id="nav-home" onclick="go('home')" aria-current="page"><span class="ic" aria-hidden="true">🏠</span>Home</button>
+    <button class="navbtn" id="nav-arap" onclick="go('arap')"><span class="ic" aria-hidden="true">🧾</span>AR & AP</button>
     <button class="fab" onclick="haptic('medium'); openTxnModal()" aria-label="Add transaction">+</button>
     <button class="navbtn" id="nav-stats" onclick="go('stats')"><span class="ic" aria-hidden="true">📊</span>Stats</button>
     <button class="navbtn" id="nav-txns" onclick="go('txns')"><span class="ic" aria-hidden="true">📒</span>Transactions</button>
@@ -982,6 +1012,103 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     </div>
 
     <button class="btn-primary" id="txn-save-btn" onclick="saveTxn()">Save transaction</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Add Receivable ===== -->
+<div class="overlay" id="modal-receivable">
+  <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-receivable')" aria-label="Close receivable form">✕</button>
+    <div class="sheet-handle"></div>
+    <h3>Add receivable</h3>
+
+    <div class="field">
+      <label id="receivable-account-label">Fund source</label>
+      <span class="field-hint">The bank account the money is coming from.</span>
+      <div class="acc-select-grid" id="receivable-account-grid" role="group" aria-labelledby="receivable-account-label"></div>
+    </div>
+
+    <div class="field">
+      <label for="receivable-borrower">Borrower</label>
+      <input type="text" id="receivable-borrower" placeholder="e.g. Juan Dela Cruz">
+    </div>
+
+    <div class="field">
+      <label for="receivable-amount">Amount</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="receivable-amount" aria-label="Amount in Philippine pesos" placeholder="0.00"><button type="button" class="calc-trigger" onclick="openCalculator('receivable-amount')" aria-label="Open calculator">🧮</button></div>
+    </div>
+
+    <div class="field">
+      <label for="receivable-note">Note</label>
+      <input type="text" id="receivable-note" placeholder="e.g. Emergency loan">
+    </div>
+
+    <button class="btn-primary" id="receivable-save-btn" onclick="saveReceivable()">Save receivable</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Add Payable ===== -->
+<div class="overlay" id="modal-payable">
+  <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-payable')" aria-label="Close payable form">✕</button>
+    <div class="sheet-handle"></div>
+    <h3>Add payable</h3>
+
+    <div class="field">
+      <label id="payable-account-label">Fund destination</label>
+      <span class="field-hint">The bank account the borrowed money went into.</span>
+      <div class="acc-select-grid" id="payable-account-grid" role="group" aria-labelledby="payable-account-label"></div>
+    </div>
+
+    <div class="field">
+      <label for="payable-lender">Lender</label>
+      <input type="text" id="payable-lender" placeholder="e.g. Juan Dela Cruz">
+    </div>
+
+    <div class="field">
+      <label for="payable-amount">Amount</label>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="payable-amount" aria-label="Amount in Philippine pesos" placeholder="0.00"><button type="button" class="calc-trigger" onclick="openCalculator('payable-amount')" aria-label="Open calculator">🧮</button></div>
+    </div>
+
+    <div class="field">
+      <label for="payable-note">Note</label>
+      <input type="text" id="payable-note" placeholder="e.g. Emergency loan">
+    </div>
+
+    <button class="btn-primary" id="payable-save-btn" onclick="savePayable()">Save payable</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Settle receivable/payable ===== -->
+<div class="overlay" id="modal-settle">
+  <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-settle')" aria-label="Close settle form">✕</button>
+    <div class="sheet-handle"></div>
+    <h3 id="settle-modal-title">Settle</h3>
+    <p class="field-hint" id="settle-modal-sub" style="margin:-8px 0 16px;"></p>
+
+    <div class="field">
+      <label id="settle-account-label">Account</label>
+      <div class="acc-select-grid" id="settle-account-grid" role="group" aria-labelledby="settle-account-label"></div>
+    </div>
+
+    <div class="field" id="settle-group-field">
+      <label id="settle-group-label">Group</label>
+      <select id="settle-group-select" style="display:none;"><option value="">Main Balance</option></select>
+      <div class="acc-select-grid" id="settle-group-grid" role="group" aria-labelledby="settle-group-label"></div>
+    </div>
+    <div class="field" id="settle-subgroup-field" style="display:none;">
+      <label for="settle-subgroup-select">Subgroup</label>
+      <select id="settle-subgroup-select"><option value="">None</option></select>
+    </div>
+
+    <div class="field">
+      <label for="settle-amount">Amount to settle</label>
+      <span class="field-hint" id="settle-amount-hint"></span>
+      <div class="amount-input"><span class="peso" aria-hidden="true">₱</span><input type="number" inputmode="decimal" id="settle-amount" aria-label="Amount to settle in Philippine pesos" placeholder="0.00"><button type="button" class="calc-trigger" onclick="openCalculator('settle-amount')" aria-label="Open calculator">🧮</button></div>
+    </div>
+
+    <button class="btn-primary" id="settle-save-btn" onclick="confirmSettle()">Settle</button>
   </div>
 </div>
 
@@ -1210,6 +1337,8 @@ function defaultState(){
     accounts: [],
     transactions: [],
     recurring: [],
+    receivables: [],
+    payables: [],
     classifications: defaultClassifications(),
     settings: { includedAccounts: [], excludedGroups: [], excludedSubgroups: [], userName: '', hideAmounts: false, theme: 'system', soundEnabled: true, reminderEnabled: false, reminderTime: '20:00' }
   };
@@ -1244,6 +1373,8 @@ function migrate(data){
   if(!Array.isArray(data.accounts)) data.accounts = [];
   if(!Array.isArray(data.transactions)) data.transactions = [];
   if(!Array.isArray(data.recurring)) data.recurring = [];
+  if(!Array.isArray(data.receivables)) data.receivables = [];
+  if(!Array.isArray(data.payables)) data.payables = [];
   if(!Array.isArray(data.classifications)) data.classifications = defaultClassifications();
   if(!data.settings || typeof data.settings !== 'object') data.settings = {};
   Object.keys(SETTINGS_SCHEMA).forEach(key=>{
@@ -1370,6 +1501,22 @@ function peso(n){
 }
 function getAccount(id){ return state.accounts.find(a=>a.id===id); }
 
+// A receivable/payable can be settled in multiple partial payments over time.
+// New items store them in item.settlements (array). Older items saved before
+// partial settlement existed used a single item.settled object for the *full*
+// amount — read transparently as a one-entry array so old data keeps working.
+function getSettlements(item){
+  if(Array.isArray(item.settlements)) return item.settlements;
+  if(item.settled) return [{ id:'legacy', accountId:item.settled.accountId, groupId:item.settled.groupId, subgroupId:item.settled.subgroupId, date:item.settled.date, amount:item.amount }];
+  return [];
+}
+function settledAmount(item){
+  return getSettlements(item).reduce((s,x)=>s+x.amount, 0);
+}
+function remainingAmount(item){
+  return Math.max(0, Math.round((item.amount - settledAmount(item) + Number.EPSILON)*100)/100);
+}
+
 function slugify(name){
   return (name||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'');
 }
@@ -1405,6 +1552,37 @@ function accountBalance(acc, respectExclusions){
       if(subgroupId && state.settings.excludedSubgroups.includes(acc.id+':'+groupId+':'+subgroupId)) return;
     }
     bal += sign*amt;
+  });
+  // Receivables/payables aren't in state.transactions (they're tracked separately,
+  // with no group/subgroup), but they still move real money: lending reduces the
+  // source account's balance, borrowing adds to the destination account's balance.
+  // The original amount always applies (that cash really moved) — settling adds
+  // a *second*, independent real movement: repayment cash flowing into wherever
+  // it was received (receivable) or out of wherever it was paid from (payable).
+  // Unlike the original amount, a settlement CAN be tied to a group/subgroup
+  // (the user picks one in the Settle modal), so it must respect the same
+  // include/exclude-from-total toggle as ordinary transactions.
+  (state.receivables||[]).forEach(r=>{
+    if(r.accountId===acc.id) bal -= r.amount;
+    getSettlements(r).forEach(s=>{
+      if(s.accountId!==acc.id) return;
+      if(respectExclusions && s.groupId){
+        if(state.settings.excludedGroups.includes(acc.id+':'+s.groupId)) return;
+        if(s.subgroupId && state.settings.excludedSubgroups.includes(acc.id+':'+s.groupId+':'+s.subgroupId)) return;
+      }
+      bal += s.amount;
+    });
+  });
+  (state.payables||[]).forEach(p=>{
+    if(p.accountId===acc.id) bal += p.amount;
+    getSettlements(p).forEach(s=>{
+      if(s.accountId!==acc.id) return;
+      if(respectExclusions && s.groupId){
+        if(state.settings.excludedGroups.includes(acc.id+':'+s.groupId)) return;
+        if(s.subgroupId && state.settings.excludedSubgroups.includes(acc.id+':'+s.groupId+':'+s.subgroupId)) return;
+      }
+      bal -= s.amount;
+    });
   });
   _balanceCache.set(cacheKey, bal);
   return bal;
@@ -1446,6 +1624,21 @@ function groupBalance(acc, groupId, subgroupId){
     else if(t.type==='expense') bal-=t.amount;
     else if(t.type==='transfer' && t.fromAccountId===acc.id) bal-=t.amount;
     else if(isIncomingTransfer) bal+=t.amount;
+  });
+  // Receivables/payables are never user-categorized either, so — like incoming
+  // transfers above — they land in Unrestricted, keeping Unrestricted + all
+  // groups equal to the account total from accountBalance(). Settlement, though,
+  // *is* categorized (the user picks where the repayment lands/comes from), so
+  // it's matched against the specific group/subgroup being queried.
+  if(groupId===null && subgroupId===undefined){
+    (state.receivables||[]).forEach(r=>{ if(r.accountId===acc.id) bal -= r.amount; });
+    (state.payables||[]).forEach(p=>{ if(p.accountId===acc.id) bal += p.amount; });
+  }
+  (state.receivables||[]).forEach(r=>{
+    getSettlements(r).forEach(s=>{ if(s.accountId===acc.id && gsMatches(groupId, subgroupId, s.groupId, s.subgroupId)) bal += s.amount; });
+  });
+  (state.payables||[]).forEach(p=>{
+    getSettlements(p).forEach(s=>{ if(s.accountId===acc.id && gsMatches(groupId, subgroupId, s.groupId, s.subgroupId)) bal -= s.amount; });
   });
   _balanceCache.set(cacheKey, bal);
   return bal;
@@ -1497,8 +1690,8 @@ function go(view, accountId){
   if(accountId) currentAccountId = accountId;
   document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
   document.getElementById('view-'+(view==='account'?'account':view)).classList.remove('hidden');
-  ['nav-home','nav-txns','nav-stats'].forEach(id=>{
-    const isActive = (id==='nav-home' && view==='home') || (id==='nav-txns' && view==='txns') || (id==='nav-stats' && view==='stats');
+  ['nav-home','nav-txns','nav-stats','nav-arap'].forEach(id=>{
+    const isActive = (id==='nav-home' && view==='home') || (id==='nav-txns' && view==='txns') || (id==='nav-stats' && view==='stats') || (id==='nav-arap' && view==='arap');
     const el = document.getElementById(id);
     el.classList.toggle('active', isActive);
     if(isActive){ el.setAttribute('aria-current','page'); } else { el.removeAttribute('aria-current'); }
@@ -1520,6 +1713,7 @@ function render(){
   if(currentView==='account') renderAccountDetail();
   if(currentView==='settings') renderSettings();
   if(currentView==='stats') renderStats();
+  if(currentView==='arap') renderArap();
   if(currentView==='recurring') renderRecurring();
 }
 
@@ -1850,6 +2044,268 @@ function groupBarsHTML(map, color, total){
     </div>`;
   }).join('');
 }
+/* ============ AR & AP ============ */
+let arapTab = 'receivable';
+let receivableModalState = { accountId: null };
+
+function renderArap(){
+  const seg = document.getElementById('arap-type-seg');
+  [...seg.children].forEach(b=>{
+    b.classList.toggle('active', b.dataset.v===arapTab);
+    b.onclick = ()=>{ arapTab = b.dataset.v; renderArap(); };
+  });
+  document.getElementById('arap-receivable-section').style.display = arapTab==='receivable' ? 'block' : 'none';
+  document.getElementById('arap-payable-section').style.display = arapTab==='payable' ? 'block' : 'none';
+  renderReceivables();
+  renderPayables();
+}
+
+function renderReceivables(){
+  const wrap = document.getElementById('arap-receivable-list');
+  if(state.receivables.length===0){
+    wrap.innerHTML = '<div class="empty"><span class="em">🧾</span><b>No receivables yet</b>Money you lend out will show up here.</div>';
+    return;
+  }
+  wrap.innerHTML = [...state.receivables].sort((a,b)=> b.date.localeCompare(a.date)).map(r=>{
+    const acc = getAccount(r.accountId);
+    const accName = acc ? acc.name : 'Deleted account';
+    const remaining = remainingAmount(r);
+    return `<div class="txn-row">
+      <div class="txn-ic transfer">🧾</div>
+      <div class="txn-info">
+        <div class="txn-note">${escapeHtml(r.borrower)}</div>
+        <div class="txn-tag">${escapeHtml(accName)}${r.note ? ' · ' + escapeHtml(r.note) : ''}</div>
+        ${settlementHistoryHtml(r)}
+        <div class="txn-tag"><strong>AR balance: ${peso(remaining)}</strong>${remaining < r.amount ? ' of ' + peso(r.amount) : ''}</div>
+      </div>
+      <div class="txn-amt neg">${peso(remaining)}</div>
+      <div class="txn-actions">
+        ${remaining > 0.005 ? `<button class="txn-edit" onclick="openSettleModal('receivable','${r.id}')" aria-label="Settle receivable from ${escapeHtml(r.borrower)}">Settle</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function settlementHistoryHtml(item){
+  const settlements = getSettlements(item);
+  if(!settlements.length) return '';
+  return settlements.map(s=>{
+    const acc = getAccount(s.accountId);
+    const accName = acc ? acc.name : 'Deleted account';
+    const label = groupSubLabel(acc || {groups:[]}, s.groupId, s.subgroupId);
+    return `<div class="txn-tag"><span style="color:var(--color-success);">✓</span> ${peso(s.amount)} · ${escapeHtml(accName)}${label && label!=='Main Balance' ? ' / '+escapeHtml(label) : ''}</div>`;
+  }).join('');
+}
+
+function openReceivableModal(){
+  if(state.accounts.length===0){ toast('Add an account first'); openAccountModal(); return; }
+  receivableModalState = { accountId: state.accounts[0].id };
+  document.getElementById('receivable-borrower').value = '';
+  document.getElementById('receivable-amount').value = '';
+  document.getElementById('receivable-note').value = '';
+  renderReceivableAccGrid();
+  showOverlay('modal-receivable');
+}
+function renderReceivableAccGrid(){
+  const grid = document.getElementById('receivable-account-grid');
+  grid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${receivableModalState.accountId===a.id?'active':''}" onclick="pickReceivableAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+}
+function pickReceivableAccount(id){ receivableModalState.accountId = id; renderReceivableAccGrid(); }
+function saveReceivable(){
+  const borrower = document.getElementById('receivable-borrower').value.trim();
+  const amount = parseFloat(document.getElementById('receivable-amount').value);
+  const note = document.getElementById('receivable-note').value.trim();
+  if(!receivableModalState.accountId){ toast('Pick a fund source'); return; }
+  if(!borrower){ toast('Enter who the money is going to'); return; }
+  if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
+  state.receivables.push({
+    id: uid(),
+    accountId: receivableModalState.accountId,
+    borrower,
+    amount,
+    note,
+    date: new Date().toISOString(),
+  });
+  saveState();
+  hideOverlay('modal-receivable');
+  toast('Receivable added');
+  renderReceivables();
+}
+
+let payableModalState = { accountId: null };
+
+function renderPayables(){
+  const wrap = document.getElementById('arap-payable-list');
+  if(state.payables.length===0){
+    wrap.innerHTML = '<div class="empty"><span class="em">🧾</span><b>No payables yet</b>Money you owe will show up here.</div>';
+    return;
+  }
+  wrap.innerHTML = [...state.payables].sort((a,b)=> b.date.localeCompare(a.date)).map(p=>{
+    const acc = getAccount(p.accountId);
+    const accName = acc ? acc.name : 'Deleted account';
+    const remaining = remainingAmount(p);
+    return `<div class="txn-row">
+      <div class="txn-ic transfer">🧾</div>
+      <div class="txn-info">
+        <div class="txn-note">${escapeHtml(p.lender)}</div>
+        <div class="txn-tag">${escapeHtml(accName)}${p.note ? ' · ' + escapeHtml(p.note) : ''}</div>
+        ${settlementHistoryHtml(p)}
+        <div class="txn-tag"><strong>AP balance: ${peso(remaining)}</strong>${remaining < p.amount ? ' of ' + peso(p.amount) : ''}</div>
+      </div>
+      <div class="txn-amt pos">${peso(remaining)}</div>
+      <div class="txn-actions">
+        ${remaining > 0.005 ? `<button class="txn-edit" onclick="openSettleModal('payable','${p.id}')" aria-label="Settle payable to ${escapeHtml(p.lender)}">Settle</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openPayableModal(){
+  if(state.accounts.length===0){ toast('Add an account first'); openAccountModal(); return; }
+  payableModalState = { accountId: state.accounts[0].id };
+  document.getElementById('payable-lender').value = '';
+  document.getElementById('payable-amount').value = '';
+  document.getElementById('payable-note').value = '';
+  renderPayableAccGrid();
+  showOverlay('modal-payable');
+}
+function renderPayableAccGrid(){
+  const grid = document.getElementById('payable-account-grid');
+  grid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${payableModalState.accountId===a.id?'active':''}" onclick="pickPayableAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+}
+function pickPayableAccount(id){ payableModalState.accountId = id; renderPayableAccGrid(); }
+function savePayable(){
+  const lender = document.getElementById('payable-lender').value.trim();
+  const amount = parseFloat(document.getElementById('payable-amount').value);
+  const note = document.getElementById('payable-note').value.trim();
+  if(!payableModalState.accountId){ toast('Pick a fund destination'); return; }
+  if(!lender){ toast('Enter who you owe the money to'); return; }
+  if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
+  state.payables.push({
+    id: uid(),
+    accountId: payableModalState.accountId,
+    lender,
+    amount,
+    note,
+    date: new Date().toISOString(),
+  });
+  saveState();
+  hideOverlay('modal-payable');
+  toast('Payable added');
+  renderPayables();
+}
+
+/* ---- Settle: pay off a payable or collect on a receivable ----
+   Settling records a second, independent real money movement — the actual
+   repayment — separate from the original loan/borrow amount. See the
+   accountBalance()/groupBalance() comments above for why both persist. */
+let settleModalState = { kind:null, itemId:null, accountId:null, groupId:null, subgroupId:null };
+
+function currentSettleItem(){
+  const list = settleModalState.kind==='receivable' ? state.receivables : state.payables;
+  return list.find(x=>x.id===settleModalState.itemId);
+}
+
+function openSettleModal(kind, itemId){
+  if(state.accounts.length===0){ toast('Add an account first'); openAccountModal(); return; }
+  settleModalState = { kind, itemId, accountId: state.accounts[0].id, groupId:'', subgroupId:'' };
+  const item = currentSettleItem();
+  if(!item) return;
+  const remaining = remainingAmount(item);
+  const isReceivable = kind==='receivable';
+  document.getElementById('settle-modal-title').textContent = isReceivable ? 'Settle receivable' : 'Settle payable';
+  document.getElementById('settle-modal-sub').innerHTML = (isReceivable
+    ? `Mark a payment from ${escapeHtml(item.borrower)} as received, and choose where it landed.`
+    : `Mark a payment to ${escapeHtml(item.lender)} as paid, and choose where the funds came from.`)
+    + `<br><strong>${isReceivable?'AR':'AP'} balance: ${peso(remaining)}</strong> of ${peso(item.amount)}`;
+  document.getElementById('settle-account-label').textContent = isReceivable ? 'Fund destination' : 'Fund source';
+  document.getElementById('settle-amount').value = remaining;
+  document.getElementById('settle-amount').max = remaining;
+  document.getElementById('settle-amount-hint').textContent = `Up to ${peso(remaining)} remaining. Enter less for a partial settlement.`;
+  renderSettleAccGrid();
+  renderSettleGroupSelect();
+  showOverlay('modal-settle');
+}
+function renderSettleAccGrid(){
+  const grid = document.getElementById('settle-account-grid');
+  grid.innerHTML = state.accounts.map(a=>`<div class="acc-opt ${settleModalState.accountId===a.id?'active':''}" onclick="pickSettleAccount('${a.id}')"><div class="av" style="background:${a.color}">${avatarInner(a)}</div><div class="info"><span class="name">${escapeHtml(a.name)}</span><span class="bal">${peso(accountBalance(a,false))}</span></div></div>`).join('');
+}
+function pickSettleAccount(id){
+  settleModalState.accountId = id;
+  settleModalState.groupId = '';
+  settleModalState.subgroupId = '';
+  renderSettleAccGrid();
+  renderSettleGroupSelect();
+}
+function renderSettleGroupSelect(){
+  const acc = getAccount(settleModalState.accountId);
+  const gsel = document.getElementById('settle-group-select');
+  const groups = acc ? (acc.groups||[]) : [];
+  gsel.innerHTML = '<option value="">Main Balance</option>' + groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+  gsel.value = settleModalState.groupId || '';
+  gsel.onchange = ()=>{ settleModalState.groupId = gsel.value; settleModalState.subgroupId=''; renderSettleGroupGrid(); renderSettleSubgroupSelect(); };
+  renderSettleGroupGrid();
+  renderSettleSubgroupSelect();
+}
+function renderSettleGroupGrid(){
+  const acc = getAccount(settleModalState.accountId);
+  const grid = document.getElementById('settle-group-grid');
+  const groups = acc ? (acc.groups||[]) : [];
+  const cur = settleModalState.groupId || '';
+  const unrestrictedBal = acc ? groupBalance(acc, null) + (acc.opening||0) : 0;
+  let html = `<div class="acc-opt ${cur===''?'active':''}" onclick="pickSettleGroup('')"><div class="info"><span class="name">Main Balance</span><span class="bal">${peso(unrestrictedBal)}</span></div></div>`;
+  html += groups.map(g=>{
+    const bal = acc ? groupBalance(acc, g.id) : 0;
+    return `<div class="acc-opt ${cur===g.id?'active':''}" onclick="pickSettleGroup('${g.id}')"><div class="info"><span class="name">${escapeHtml(g.name)}</span><span class="bal">${peso(bal)}</span></div></div>`;
+  }).join('');
+  grid.innerHTML = html;
+}
+function pickSettleGroup(id){
+  settleModalState.groupId = id;
+  settleModalState.subgroupId = '';
+  document.getElementById('settle-group-select').value = id;
+  renderSettleGroupGrid();
+  renderSettleSubgroupSelect();
+}
+function renderSettleSubgroupSelect(){
+  const acc = getAccount(settleModalState.accountId);
+  const gid = settleModalState.groupId;
+  const field = document.getElementById('settle-subgroup-field');
+  const ssel = document.getElementById('settle-subgroup-select');
+  const g = acc && gid ? findGroup(acc, gid) : null;
+  if(g && (g.subgroups||[]).length){
+    field.style.display='block';
+    ssel.innerHTML = '<option value="">None</option>' + g.subgroups.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+    ssel.value = settleModalState.subgroupId || '';
+    ssel.onchange = ()=>{ settleModalState.subgroupId = ssel.value; };
+  } else {
+    field.style.display='none'; ssel.innerHTML='<option value="">None</option>';
+  }
+}
+function confirmSettle(){
+  const item = currentSettleItem();
+  if(!item) return;
+  if(!settleModalState.accountId){ toast('Pick an account'); return; }
+  const remaining = remainingAmount(item);
+  const amount = parseFloat(document.getElementById('settle-amount').value);
+  if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
+  if(amount > remaining + 0.005){ toast(`Amount can't exceed the ${peso(remaining)} balance`); return; }
+  snapshotBeforeChange();
+  if(!Array.isArray(item.settlements)) item.settlements = getSettlements(item); // pulls in a legacy single `settled` entry, if any
+  delete item.settled;
+  item.settlements.push({
+    id: uid(),
+    accountId: settleModalState.accountId,
+    groupId: settleModalState.groupId || null,
+    subgroupId: settleModalState.subgroupId || null,
+    amount,
+    date: new Date().toISOString(),
+  });
+  const ok = saveState();
+  hideOverlay('modal-settle');
+  if(settleModalState.kind==='receivable') renderReceivables(); else renderPayables();
+  if(ok) toast(amount + 0.005 >= remaining ? 'Settled' : 'Partial settlement recorded', { label:'Undo', onClick: undo });
+}
+
 function renderStats(){
   const {income, expense, incomeByClass, expenseByClass} = computeStats(statsPeriod);
   document.getElementById('stats-income').textContent = peso(income);

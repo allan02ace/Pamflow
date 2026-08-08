@@ -741,6 +741,11 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     <div class="section-head" style="margin-top:4px;">
       <h2>AR & AP</h2>
     </div>
+    <div class="stat-cards">
+      <div class="stat-card income"><div class="lbl">Total AR</div><div class="val mono" id="arap-total-ar">₱0.00</div></div>
+      <div class="stat-card expense"><div class="lbl">Total AP</div><div class="val mono" id="arap-total-ap">₱0.00</div></div>
+    </div>
+
     <div class="field">
       <div class="seg" id="arap-type-seg">
         <button data-v="receivable" class="active">Receivable</button>
@@ -1021,7 +1026,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
   <div class="sheet">
     <button class="sheet-close" onclick="hideOverlay('modal-receivable')" aria-label="Close receivable form">✕</button>
     <div class="sheet-handle"></div>
-    <h3>Add receivable</h3>
+    <h3 id="receivable-modal-title">Add receivable</h3>
 
     <div class="field">
       <label id="receivable-account-label">Fund source</label>
@@ -1045,6 +1050,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     </div>
 
     <button class="btn-primary" id="receivable-save-btn" onclick="saveReceivable()">Save receivable</button>
+    <button class="btn-danger" id="receivable-delete-btn" style="display:none;" onclick="deleteReceivableConfirm()">Delete receivable</button>
   </div>
 </div>
 
@@ -1053,7 +1059,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
   <div class="sheet">
     <button class="sheet-close" onclick="hideOverlay('modal-payable')" aria-label="Close payable form">✕</button>
     <div class="sheet-handle"></div>
-    <h3>Add payable</h3>
+    <h3 id="payable-modal-title">Add payable</h3>
 
     <div class="field">
       <label id="payable-account-label">Fund destination</label>
@@ -1077,6 +1083,7 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
     </div>
 
     <button class="btn-primary" id="payable-save-btn" onclick="savePayable()">Save payable</button>
+    <button class="btn-danger" id="payable-delete-btn" style="display:none;" onclick="deletePayableConfirm()">Delete payable</button>
   </div>
 </div>
 
@@ -2057,6 +2064,10 @@ function renderArap(){
   });
   document.getElementById('arap-receivable-section').style.display = arapTab==='receivable' ? 'block' : 'none';
   document.getElementById('arap-payable-section').style.display = arapTab==='payable' ? 'block' : 'none';
+  const totalAr = state.receivables.reduce((sum,r)=> sum + remainingAmount(r), 0);
+  const totalAp = state.payables.reduce((sum,p)=> sum + remainingAmount(p), 0);
+  document.getElementById('arap-total-ar').textContent = peso(totalAr);
+  document.getElementById('arap-total-ap').textContent = peso(totalAp);
   renderReceivables();
   renderPayables();
 }
@@ -2086,6 +2097,8 @@ function renderReceivables(){
       <div class="txn-amt neg">${peso(remaining)}</div>
       <div class="txn-actions">
         ${remaining > 0.005 ? `<button class="txn-edit" onclick="openSettleModal('receivable','${r.id}')" aria-label="Settle receivable from ${escapeHtml(r.borrower)}">Settle</button>` : ''}
+        <button class="txn-edit" onclick="openReceivableModal('${r.id}')" aria-label="Edit receivable from ${escapeHtml(r.borrower)}">✎</button>
+        <button class="txn-del" onclick="deleteReceivable('${r.id}')" aria-label="Delete receivable from ${escapeHtml(r.borrower)}">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -2101,12 +2114,16 @@ function settlementHistoryHtml(item){
   }).join('');
 }
 
-function openReceivableModal(){
+function openReceivableModal(editId){
   if(state.accounts.length===0){ toast('Add an account first'); openAccountModal(); return; }
-  receivableModalState = { accountId: state.accounts[0].id };
-  document.getElementById('receivable-borrower').value = '';
-  document.getElementById('receivable-amount').value = '';
-  document.getElementById('receivable-note').value = '';
+  const item = editId ? state.receivables.find(r=>r.id===editId) : null;
+  receivableModalState = { accountId: item ? item.accountId : state.accounts[0].id, editId: item ? editId : null };
+  document.getElementById('receivable-modal-title').textContent = item ? 'Edit receivable' : 'Add receivable';
+  document.getElementById('receivable-save-btn').textContent = item ? 'Save changes' : 'Save receivable';
+  document.getElementById('receivable-delete-btn').style.display = item ? 'block' : 'none';
+  document.getElementById('receivable-borrower').value = item ? item.borrower : '';
+  document.getElementById('receivable-amount').value = item ? item.amount : '';
+  document.getElementById('receivable-note').value = item ? (item.note||'') : '';
   renderReceivableAccGrid();
   showOverlay('modal-receivable');
 }
@@ -2124,18 +2141,48 @@ function saveReceivable(){
   const note = document.getElementById('receivable-note').value.trim();
   if(!borrower){ toast('Enter who the money is going to'); return; }
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
-  state.receivables.push({
-    id: uid(),
-    accountId: receivableModalState.accountId || null,
-    borrower,
-    amount,
-    note,
-    date: new Date().toISOString(),
-  });
-  saveState();
+  if(receivableModalState.editId){
+    const item = state.receivables.find(r=>r.id===receivableModalState.editId);
+    if(item){
+      item.accountId = receivableModalState.accountId || null;
+      item.borrower = borrower;
+      item.amount = amount;
+      item.note = note;
+    }
+    saveState();
+    hideOverlay('modal-receivable');
+    toast('Receivable updated');
+  } else {
+    state.receivables.push({
+      id: uid(),
+      accountId: receivableModalState.accountId || null,
+      borrower,
+      amount,
+      note,
+      date: new Date().toISOString(),
+    });
+    saveState();
+    hideOverlay('modal-receivable');
+    toast('Receivable added');
+  }
+  render();
+}
+function deleteReceivable(id){
+  snapshotBeforeChange();
+  state.receivables = state.receivables.filter(r=>r.id!==id);
+  const ok = saveState();
+  render();
+  if(ok) toast('Receivable deleted', { label:'Undo', onClick: undo });
+}
+function deleteReceivableConfirm(){
+  const id = receivableModalState.editId;
+  if(!id) return;
+  if(!confirm('Delete this receivable? This cannot be undone.')) return;
   hideOverlay('modal-receivable');
-  toast('Receivable added');
-  renderReceivables();
+  state.receivables = state.receivables.filter(r=>r.id!==id);
+  saveState();
+  render();
+  toast('Receivable deleted');
 }
 
 let payableModalState = { accountId: null };
@@ -2160,17 +2207,23 @@ function renderPayables(){
       <div class="txn-amt pos">${peso(remaining)}</div>
       <div class="txn-actions">
         ${remaining > 0.005 ? `<button class="txn-edit" onclick="openSettleModal('payable','${p.id}')" aria-label="Settle payable to ${escapeHtml(p.lender)}">Settle</button>` : ''}
+        <button class="txn-edit" onclick="openPayableModal('${p.id}')" aria-label="Edit payable to ${escapeHtml(p.lender)}">✎</button>
+        <button class="txn-del" onclick="deletePayable('${p.id}')" aria-label="Delete payable to ${escapeHtml(p.lender)}">✕</button>
       </div>
     </div>`;
   }).join('');
 }
 
-function openPayableModal(){
+function openPayableModal(editId){
   if(state.accounts.length===0){ toast('Add an account first'); openAccountModal(); return; }
-  payableModalState = { accountId: state.accounts[0].id };
-  document.getElementById('payable-lender').value = '';
-  document.getElementById('payable-amount').value = '';
-  document.getElementById('payable-note').value = '';
+  const item = editId ? state.payables.find(p=>p.id===editId) : null;
+  payableModalState = { accountId: item ? item.accountId : state.accounts[0].id, editId: item ? editId : null };
+  document.getElementById('payable-modal-title').textContent = item ? 'Edit payable' : 'Add payable';
+  document.getElementById('payable-save-btn').textContent = item ? 'Save changes' : 'Save payable';
+  document.getElementById('payable-delete-btn').style.display = item ? 'block' : 'none';
+  document.getElementById('payable-lender').value = item ? item.lender : '';
+  document.getElementById('payable-amount').value = item ? item.amount : '';
+  document.getElementById('payable-note').value = item ? (item.note||'') : '';
   renderPayableAccGrid();
   showOverlay('modal-payable');
 }
@@ -2188,18 +2241,48 @@ function savePayable(){
   const note = document.getElementById('payable-note').value.trim();
   if(!lender){ toast('Enter who you owe the money to'); return; }
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
-  state.payables.push({
-    id: uid(),
-    accountId: payableModalState.accountId || null,
-    lender,
-    amount,
-    note,
-    date: new Date().toISOString(),
-  });
-  saveState();
+  if(payableModalState.editId){
+    const item = state.payables.find(p=>p.id===payableModalState.editId);
+    if(item){
+      item.accountId = payableModalState.accountId || null;
+      item.lender = lender;
+      item.amount = amount;
+      item.note = note;
+    }
+    saveState();
+    hideOverlay('modal-payable');
+    toast('Payable updated');
+  } else {
+    state.payables.push({
+      id: uid(),
+      accountId: payableModalState.accountId || null,
+      lender,
+      amount,
+      note,
+      date: new Date().toISOString(),
+    });
+    saveState();
+    hideOverlay('modal-payable');
+    toast('Payable added');
+  }
+  render();
+}
+function deletePayable(id){
+  snapshotBeforeChange();
+  state.payables = state.payables.filter(p=>p.id!==id);
+  const ok = saveState();
+  render();
+  if(ok) toast('Payable deleted', { label:'Undo', onClick: undo });
+}
+function deletePayableConfirm(){
+  const id = payableModalState.editId;
+  if(!id) return;
+  if(!confirm('Delete this payable? This cannot be undone.')) return;
   hideOverlay('modal-payable');
-  toast('Payable added');
-  renderPayables();
+  state.payables = state.payables.filter(p=>p.id!==id);
+  saveState();
+  render();
+  toast('Payable deleted');
 }
 
 /* ---- Settle: pay off a payable or collect on a receivable ----

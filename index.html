@@ -1800,6 +1800,10 @@ function renderAllTxns(){
   }
 
   let list = [...state.transactions];
+  // AR/AP additions and settlements move real money but live outside
+  // state.transactions (see arapVirtualTxns()) — fold them in for display.
+  // They have no classificationId, so a category filter naturally excludes them.
+  if(txnFilterClass === 'all') list = list.concat(arapVirtualTxns());
   if(txnFilterAccount !== 'all'){
     list = list.filter(t=> t.accountId===txnFilterAccount || t.fromAccountId===txnFilterAccount || t.toAccountId===txnFilterAccount);
   }
@@ -1819,6 +1823,7 @@ function setTxnFilter(id){ txnFilterAccount = id; renderAllTxns(); }
 function setTxnClassFilter(id){ txnFilterClass = id; renderAllTxns(); }
 
 function txnRowHTML(t, showAccountContext){
+  if(t.type==='arap') return arapTxnRowHTML(t, showAccountContext);
   let icon, cls, sign, amtClass, label, tag;
   if(t.type==='income'){ icon='➕'; cls='income'; sign='+'; amtClass='pos'; }
   else if(t.type==='expense'){ icon='➖'; cls='expense'; sign='-'; amtClass='neg'; }
@@ -1854,6 +1859,35 @@ function txnRowHTML(t, showAccountContext){
     <div class="txn-actions">
       ${t.type!=='reallocate' ? `<button class="txn-edit" onclick="editTxn('${t.id}')" aria-label="Edit transaction: ${escapeHtml(label)}">✎</button>` : ''}
       <button class="txn-del" onclick="deleteTxn('${t.id}')" aria-label="Delete transaction: ${escapeHtml(label)}">✕</button>
+    </div>
+  </div>`;
+}
+// AR/AP additions and settlements, rendered read-only in history lists (see
+// arapVirtualTxns() above) — editing/deleting them happens from the AR & AP
+// tab itself, since that's where the underlying receivable/payable and its
+// settlement history actually live.
+function arapTxnRowHTML(t, showAccountContext){
+  const isReceivable = t.arapKind==='receivable';
+  const isAdd = t.arapAction==='add';
+  // Lending out (AR add) and paying back (AP settle) are outflows;
+  // borrowing in (AP add) and collecting (AR settle) are inflows.
+  const isOutflow = (isReceivable && isAdd) || (!isReceivable && !isAdd);
+  const cls = isOutflow ? 'expense' : 'income';
+  const sign = isOutflow ? '-' : '+';
+  const amtClass = isOutflow ? 'neg' : 'pos';
+  const acc = getAccount(t.accountId);
+  const g = acc && t.groupId ? findGroup(acc, t.groupId) : null;
+  const sg = g && t.subgroupId ? (g.subgroups||[]).find(s=>s.id===t.subgroupId) : null;
+  const tag = (showAccountContext && acc ? acc.name+' · ' : '') + (g ? g.name + (sg? ' / '+sg.name : '') : 'Main Balance') + ' · ' + (isReceivable ? 'AR' : 'AP') + (isAdd ? '' : ' settlement');
+  return `<div class="txn-row">
+    <div class="txn-ic ${cls}">🧾</div>
+    <div class="txn-info">
+      <div class="txn-note">${escapeHtml(t.label)}</div>
+      <div class="txn-tag">${escapeHtml(tag)} · ${formatDate(t.date)}</div>
+    </div>
+    <div class="txn-amt ${amtClass} mono">${sign}${peso(t.amount)}</div>
+    <div class="txn-actions">
+      <button class="txn-edit" onclick="openArapFromTxn('${isReceivable?'receivable':'payable'}')" aria-label="View in AR & AP">AR & AP</button>
     </div>
   </div>`;
 }
@@ -1963,6 +1997,7 @@ function renderAccountDetail(){
   groupsEl.innerHTML = groupsHtml;
 
   const accTxns = state.transactions.filter(t=> t.accountId===acc.id || t.fromAccountId===acc.id || t.toAccountId===acc.id)
+    .concat(arapVirtualTxns().filter(t=> t.accountId===acc.id))
     .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || b.createdAt - a.createdAt).slice(0,25);
   const txnsEl = document.getElementById('acc-txns');
   txnsEl.innerHTML = accTxns.length ? accTxns.map(t=>txnRowHTML(t,false)).join('') : `<div class="empty" style="padding:16px;"><span style="font-size:12px;">No transactions for this account yet.</span></div>`;
@@ -2053,6 +2088,57 @@ function groupBarsHTML(map, color, total){
   }).join('');
 }
 /* ============ AR & AP ============ */
+// AR/AP entries (and their settlements) are deliberately NOT stored in
+// state.transactions — accountBalance()/groupBalance() already fold them
+// into balances directly (see comments above those functions). But that
+// means they were invisible in the transaction history lists, which was
+// confusing since real money moved. These "virtual" rows let the history
+// views *display* AR/AP activity without duplicating it into
+// state.transactions (which would double-count the balance impact).
+function arapVirtualTxns(){
+  const out = [];
+  (state.receivables||[]).forEach(r=>{
+    if(r.accountId){
+      out.push({
+        id: 'arap-r-add-'+r.id, type:'arap', arapKind:'receivable', arapAction:'add',
+        accountId: r.accountId, amount: r.amount,
+        date: (r.date||'').slice(0,10), createdAt: Date.parse(r.date)||0,
+        label: 'Lent to '+(r.borrower||'?'),
+      });
+    }
+    getSettlements(r).forEach(s=>{
+      if(!s.accountId) return;
+      out.push({
+        id: 'arap-r-settle-'+s.id, type:'arap', arapKind:'receivable', arapAction:'settle',
+        accountId: s.accountId, groupId: s.groupId||null, subgroupId: s.subgroupId||null, amount: s.amount,
+        date: (s.date||'').slice(0,10), createdAt: Date.parse(s.date)||0,
+        label: 'Received from '+(r.borrower||'?'),
+      });
+    });
+  });
+  (state.payables||[]).forEach(p=>{
+    if(p.accountId){
+      out.push({
+        id: 'arap-p-add-'+p.id, type:'arap', arapKind:'payable', arapAction:'add',
+        accountId: p.accountId, amount: p.amount,
+        date: (p.date||'').slice(0,10), createdAt: Date.parse(p.date)||0,
+        label: 'Borrowed from '+(p.lender||'?'),
+      });
+    }
+    getSettlements(p).forEach(s=>{
+      if(!s.accountId) return;
+      out.push({
+        id: 'arap-p-settle-'+s.id, type:'arap', arapKind:'payable', arapAction:'settle',
+        accountId: s.accountId, groupId: s.groupId||null, subgroupId: s.subgroupId||null, amount: s.amount,
+        date: (s.date||'').slice(0,10), createdAt: Date.parse(s.date)||0,
+        label: 'Paid to '+(p.lender||'?'),
+      });
+    });
+  });
+  return out;
+}
+function openArapFromTxn(kind){ arapTab = kind; go('arap'); }
+
 let arapTab = 'receivable';
 let receivableModalState = { accountId: null };
 

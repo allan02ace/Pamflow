@@ -21,6 +21,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- leaflet-rotate 0.5.4 (local copy): lets the user rotate the maps. Must load right after Leaflet. -->
+<script src="leaflet-rotate.js"></script>
 <style>
   :root{
     --bg:#000000;
@@ -1175,7 +1177,77 @@
     padding:30px 20px; text-align:center; color:var(--ink-faint); font-size:12px; line-height:1.6;
   }
 
+
+  /* rotatable maps: compass control themed to match the zoom buttons */
+  .leaflet-control-rotate a{
+    background:var(--panel-hi) !important;
+    border-color:var(--hairline) !important;
+  }
+  body:not([data-theme="light"]) .leaflet-control-rotate-arrow{filter:invert(.9);}
+
+  /* ---------- race mode ---------- */
+  .race-launch{padding:12px 16px; border-bottom:1px solid var(--hairline);}
+  .race-launch-title{
+    font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:0.08em;
+    text-transform:uppercase; font-size:12px; color:var(--ink-dim); margin-bottom:8px;
+  }
+  .race-launch-btns{display:flex; gap:8px;}
+  .race-mode-btn{
+    flex:1; text-align:left; background:var(--panel-hi); border:1px solid var(--hairline);
+    border-radius:12px; padding:10px 12px; color:var(--ink); cursor:pointer;
+    font-family:'Inter',sans-serif; transition:border-color .2s var(--ease-standard);
+  }
+  .race-mode-btn b{display:block; font-size:13px; margin-bottom:2px;}
+  .race-mode-btn span{display:block; font-size:10.5px; color:var(--ink-dim); line-height:1.35;}
+  .race-mode-btn:hover:not(:disabled){border-color:var(--gold);}
+  .race-mode-btn:disabled{opacity:.4; cursor:not-allowed;}
+  .race-launch-note{font-size:11px; color:var(--ink-faint); margin-top:6px;}
+  .race-launch-note:empty{display:none;}
+  .race-result-line{margin:10px 0 0; font-family:'Space Mono',monospace; font-size:11px; color:var(--gold); line-height:1.5;}
+
+  .race-hud{
+    margin:10px 0 0; padding:12px 14px;
+    background:linear-gradient(180deg,var(--panel-hi),var(--panel));
+    border:1px solid var(--hairline); border-radius:16px; box-shadow:var(--shadow-card);
+  }
+  .race-hud-top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .race-hud-title{
+    display:flex; align-items:center; gap:8px; font-family:'Oswald',sans-serif; font-weight:600;
+    letter-spacing:0.08em; text-transform:uppercase; font-size:13px;
+  }
+  .race-mode-chip{
+    font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase;
+    padding:3px 8px; border-radius:20px; border:1px solid var(--hairline); color:var(--gold);
+  }
+  .race-hud-close{background:none; border:none; color:var(--ink-faint); font-size:15px; cursor:pointer; padding:4px 6px;}
+  .race-vs{font-family:'Space Mono',monospace; font-size:10px; color:var(--ink-faint); margin-top:4px;}
+  .race-gap-wrap{display:flex; align-items:baseline; gap:10px; margin-top:8px;}
+  .race-gap{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:38px; line-height:1;
+    font-variant-numeric:tabular-nums; color:var(--ink);
+  }
+  .race-gap-label{
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--ink-dim);
+  }
+  .race-hud.ahead .race-gap, .race-hud.ahead .race-gap-label{color:var(--good);}
+  .race-hud.behind .race-gap, .race-hud.behind .race-gap-label{color:var(--danger);}
+  .race-bar{position:relative; height:6px; border-radius:3px; background:var(--hairline); margin:14px 8px 4px;}
+  .race-dot{
+    position:absolute; top:50%; width:12px; height:12px; border-radius:50%;
+    transform:translate(-50%,-50%); border:2px solid var(--bg); transition:left .9s linear;
+  }
+  .race-dot.ghost{background:var(--gold);}
+  .race-dot.you{background:var(--needle);}
+  .race-flag{position:absolute; right:-6px; top:-17px; font-size:12px; line-height:1;}
+  .race-sub{font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-dim); margin-top:8px; line-height:1.5;}
+  .race-warn{
+    margin-top:8px; padding:6px 10px; border-radius:8px; background:rgba(224,96,74,0.12);
+    color:var(--danger); font-size:11px; font-family:'Space Mono',monospace;
+  }
+
   @media (prefers-reduced-motion: reduce){
+    .race-dot{transition:none;}
     .needle{transition:none;}
     .modal-sheet{animation:none;}
     .float-card{animation:none;}
@@ -1222,6 +1294,25 @@
         <div class="debug-note">"Device speed" comes straight from your phone's GPS chip. "GPS-calculated" is worked out from the distance and time between the last two points. A big, consistent gap between them points to the device chip; if both agree but are still off from your odometer, it's more likely mounting/signal quality.</div>
       </div>
     </div>
+  </div>
+
+  <div class="race-hud" id="raceHud" style="display:none;">
+    <div class="race-hud-top">
+      <div class="race-hud-title"><span>🏁 Race</span><span class="race-mode-chip" id="raceModeChip">Same route</span></div>
+      <button class="race-hud-close" id="raceCancelBtn" title="Cancel race" aria-label="Cancel race">✕</button>
+    </div>
+    <div class="race-vs" id="raceVs"></div>
+    <div class="race-gap-wrap">
+      <div class="race-gap" id="raceGap">–</div>
+      <div class="race-gap-label" id="raceGapLabel">Ready</div>
+    </div>
+    <div class="race-bar">
+      <div class="race-dot ghost" id="raceDotGhost" style="left:0%;"></div>
+      <div class="race-dot you" id="raceDotYou" style="left:0%;"></div>
+      <div class="race-flag">🏁</div>
+    </div>
+    <div class="race-sub" id="raceSub"></div>
+    <div class="race-warn" id="raceWarn" style="display:none;">Off the route — rejoin the course to keep your progress counting.</div>
   </div>
 
   <div class="controls">
@@ -1400,12 +1491,21 @@
             <div class="rc-val" id="rcMax">0 <span class="rc-unit">km/h</span></div>
           </div>
         </div>
+        <div class="race-result-line" id="rcRace" style="display:none;"></div>
         <div class="ride-card-actions">
           <button class="ride-share-btn" id="rideShareBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             Share
           </button>
         </div>
+      </div>
+      <div class="race-launch" id="raceLaunch" style="display:none;">
+        <div class="race-launch-title">🏁 Race this ride</div>
+        <div class="race-launch-btns">
+          <button class="race-mode-btn" id="raceSameBtn"><b>Same route</b><span>Ride this course again. First to the end wins.</span></button>
+          <button class="race-mode-btn" id="raceDiffBtn"><b>Different route</b><span>Ride anywhere. First to cover its distance wins.</span></button>
+        </div>
+        <div class="race-launch-note" id="raceLaunchNote"></div>
       </div>
       <div class="map-wrap"><div id="rideMap"></div></div>
       <div class="legend" id="modalLegend" style="display:none;"></div>
@@ -1460,6 +1560,7 @@
         </div>
       </div>
     </div>
+    <div class="race-result-line" id="fcRace" style="display:none;"></div>
     <div class="fc-style-row" id="fcStyleRow">
       <span class="fc-style-label">Share style</span>
       <div class="fc-style-toggle" id="fcStyleToggle">
@@ -1606,7 +1707,7 @@ window.storage = (function () {
 
   let sessionPath = []; // [{lat, lon, t (sec offset), v (m/s), d (meters so far)}]
   let lastPathSample = null; // {lat, lon, t}
-  let demoLat = 0, demoLon = 0, demoHeading = 0;
+  let demoLat = 0, demoLon = 0, demoHeading = 0, demoS = 0;
 
   const MPS_TO_KMH = 3.6;
 
@@ -1642,6 +1743,16 @@ window.storage = (function () {
 
   // debug / accuracy diagnostics
   let debugMode = false;
+
+  // race mode (ghost race against a saved ride)
+  const RACE_MOVE_MS = 1.5;          // speed that counts as "moving off" (m/s)
+  const RACE_START_ZONE_M = 40;      // same-route: must be this close to the start line to begin
+  const RACE_OFFROUTE_M = 60;        // same-route: farther than this from the course = off route
+  const RACE_FINISH_ZONE_M = 20;     // same-route: finish line sits this far before the course end
+  const RACE_MIN_DIST_M = 200;       // rides shorter than this can't be raced
+  const RACE_MIN_TIME_S = 20;
+  const RACE_WINDOW_SEGS = 100;      // same-route: how far ahead along the course we look for the rider
+  let race = null;                   // null when no race is armed / running
 
   const els = {
     gaugeFlipWrap: document.getElementById('gaugeFlipWrap'),
@@ -1764,6 +1875,22 @@ window.storage = (function () {
     musicNextBtn: document.getElementById('musicNextBtn'),
     musicVolBtn: document.getElementById('musicVolBtn'),
     musicAudio: document.getElementById('musicAudio'),
+    raceHud: document.getElementById('raceHud'),
+    raceModeChip: document.getElementById('raceModeChip'),
+    raceCancelBtn: document.getElementById('raceCancelBtn'),
+    raceVs: document.getElementById('raceVs'),
+    raceGap: document.getElementById('raceGap'),
+    raceGapLabel: document.getElementById('raceGapLabel'),
+    raceDotGhost: document.getElementById('raceDotGhost'),
+    raceDotYou: document.getElementById('raceDotYou'),
+    raceSub: document.getElementById('raceSub'),
+    raceWarn: document.getElementById('raceWarn'),
+    raceLaunch: document.getElementById('raceLaunch'),
+    raceSameBtn: document.getElementById('raceSameBtn'),
+    raceDiffBtn: document.getElementById('raceDiffBtn'),
+    raceLaunchNote: document.getElementById('raceLaunchNote'),
+    rcRace: document.getElementById('rcRace'),
+    fcRace: document.getElementById('fcRace'),
   };
 
   // ---------- gauge drawing ----------
@@ -1931,6 +2058,7 @@ window.storage = (function () {
     const avgMs = weightedAvgSpeed(speedSamples);
     els.statAvg.textContent = Math.round(msToUnit(avgMs));
     els.statMax.textContent = Math.round(msToUnit(maxSpeedMs));
+    if(race) raceStep();
   }
 
   function formatDuration(sec){
@@ -2300,6 +2428,7 @@ if(paused){
       maybeSamplePath(latitude, longitude, tSec, currentSpeedMs);
       updateLiveMapPosition(latitude, longitude);
     }
+    if(race) raceOnFix(latitude, longitude);
     updateLiveStats();
   }
 
@@ -2366,8 +2495,14 @@ if(paused){
     sessionPath = []; lastPathSample = null;
     resetAutoPause();
     resetLiveMapTrack();
+    raceOnTrackingStart();
     // fake starting point (Golden Gate Park area) so the map has something real to render
     demoLat = 37.7694; demoLon = -122.4862; demoHeading = Math.random() * Math.PI * 2;
+    demoS = 0;
+    if(race && race.mode === 'same'){
+      // same-route demo: start the simulated rider on the ghost's start line and follow its course
+      demoLat = race.ghost.pts[0].lat; demoLon = race.ghost.pts[0].lon;
+    }
     setGpsStatus('live', 'Demo mode');
     setHint('Simulating a drive — no real GPS is used.');
     els.sessionBtn.textContent = 'Stop Tracking';
@@ -2378,7 +2513,7 @@ if(paused){
     let t = 0;
     demoTimer = setInterval(()=>{
       t += 1;
-      const simMs = Math.max(0, (Math.sin(t/12) * 0.5 + 0.5) * 26 + Math.random()*2);
+      const simMs = race ? raceDemoSpeed(t) : Math.max(0, (Math.sin(t/12) * 0.5 + 0.5) * 26 + Math.random()*2);
       currentSpeedMs = simMs;
       updateReadout(simMs);
       const now = Date.now();
@@ -2392,16 +2527,23 @@ if(paused){
         speedSamples.push({ v: simMs, dt: 1 }); // fixed 1s tick, so this is already time-uniform
         distanceM += simMs;
 
-        // gentle random-walk heading so the route curves like real streets
-        demoHeading += (Math.random() - 0.5) * 0.35;
-        const metersMoved = simMs;
-        const dLat = (metersMoved * Math.cos(demoHeading)) / 111320;
-        const dLon = (metersMoved * Math.sin(demoHeading)) / (111320 * Math.cos(demoLat * Math.PI/180));
-        demoLat += dLat;
-        demoLon += dLon;
+        if(race && race.mode === 'same'){
+          demoS = Math.min(demoS + simMs, race.ghost.L);
+          const cp = raceCourseAt(demoS);
+          demoLat = cp.lat; demoLon = cp.lon;
+        }else{
+          // gentle random-walk heading so the route curves like real streets
+          demoHeading += (Math.random() - 0.5) * 0.35;
+          const metersMoved = simMs;
+          const dLat = (metersMoved * Math.cos(demoHeading)) / 111320;
+          const dLon = (metersMoved * Math.sin(demoHeading)) / (111320 * Math.cos(demoLat * Math.PI/180));
+          demoLat += dLat;
+          demoLon += dLon;
+        }
 
         maybeSamplePath(demoLat, demoLon, t, simMs);
         updateLiveMapPosition(demoLat, demoLon);
+        if(race) raceOnFix(demoLat, demoLon);
       }
       updateLiveStats();
     }, 1000);
@@ -2426,6 +2568,7 @@ if(paused){
     resetAutoPause();
     resetDebugPanel();
     resetLiveMapTrack();
+    raceOnTrackingStart();
     geoFatalAlertShown = false;
     setGpsStatus('', 'Locating…');
     setHint('Keep this screen open while you drive or ride.');
@@ -2468,6 +2611,7 @@ if(paused){
           maybeSamplePathForce(lastPos.lat, lastPos.lon, duration, currentSpeedMs);
         }
         const avgMs = weightedAvgSpeed(speedSamples);
+        const raceRec = raceBuildRecord(); // null unless a race was actually under way
         const savedId = Date.now().toString(36);
         await saveSession({
           id: savedId,
@@ -2478,7 +2622,8 @@ if(paused){
           maxMs: maxSpeedMs,
           avgMs: avgMs,
           unit: unit,
-          path: sessionPath
+          path: sessionPath,
+          race: raceRec || undefined
         });
         setHint('Session saved — see it in the logbook below.');
         openRideDetail(savedId, true);
@@ -2492,6 +2637,7 @@ if(paused){
     resetAutoPause();
     releaseWakeLock();
     updateReadout(0);
+    raceEnd();
   }
 
   els.sessionBtn.addEventListener('click', ()=>{
@@ -2607,7 +2753,7 @@ if(paused){
           <div class="entry-date">${formatDate(e.date)}<div class="entry-time">${formatTime(e.date)}</div></div>
           <div class="entry-main">
             <div class="entry-max">${maxV} <span style="font-size:11px;color:var(--ink-dim);font-weight:400;">${u} max</span></div>
-            <div class="entry-sub">${dist} ${dUnit} · ${formatDuration(e.durationSec)} · avg ${avgV} ${u}${(!e.path || e.path.length < 2) ? ' · no route saved' : ''}</div>
+            <div class="entry-sub">${dist} ${dUnit} · ${formatDuration(e.durationSec)} · avg ${avgV} ${u}${(!e.path || e.path.length < 2) ? ' · no route saved' : ''}${raceTag(e)}</div>
             ${!compareMode
               ? `<div class="entry-note-wrap"><input class="entry-note-input" data-id="${e.id}" placeholder="Add a note…" value="${(e.note || '').replace(/"/g,'&quot;')}"></div>`
               : (e.note ? `<div class="entry-note-display">${escapeHtml(e.note)}</div>` : '')}
@@ -2700,9 +2846,21 @@ if(paused){
   let activeRides = []; // [{entry, color, marker, poly}]
   let maxDurationSec = 0;
 
+  // Map rotation (leaflet-rotate): two-finger twist on touch screens, Shift + mouse wheel on desktop,
+  // or drag the compass button left/right. Tap the compass to snap back to north.
+  // If the plugin file failed to load these options are simply ignored and the maps work as before.
+  const ROTATE_OPTS = {
+    rotate: true,
+    bearing: 0,
+    touchRotate: true,
+    shiftKeyRotate: true,
+    pitchDrag: false,
+    rotateControl: { closeOnZeroBearing: false, visualizePitch: false }
+  };
+
   function ensureMap(){
     if(rideMap) return rideMap;
-    rideMap = L.map('rideMap', { zoomControl: true, attributionControl: true });
+    rideMap = L.map('rideMap', Object.assign({ zoomControl: true, attributionControl: true }, ROTATE_OPTS));
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
@@ -2731,7 +2889,8 @@ if(paused){
       zoomControl: false,
       attributionControl: true,
       dragging: true,
-      scrollWheelZoom: false
+      scrollWheelZoom: false,
+      ...ROTATE_OPTS
     }).setView([14.6488, 120.9822], 14); // default: Caloocan, PH — recentres once a real fix arrives
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -2774,6 +2933,7 @@ if(paused){
     els.mapFlipBtn.title = mapFlipped ? 'Flip to speedometer' : 'Flip to map';
     if(mapFlipped){
       ensureLiveMap();
+      raceMapSync();
       // replay any path already captured this session (e.g. flipped mid-ride)
       if(liveMapLatLngs.length === 0 && sessionPath && sessionPath.length){
         sessionPath.forEach(p => updateLiveMapPosition(p.lat, p.lon));
@@ -2856,6 +3016,11 @@ if(paused){
       const endTs = entry.startDate ? entry.startDate + entry.durationSec * 1000 : entry.date;
       els.rcTimeRange.textContent = `${formatTime(startTs)} – ${formatTime(endTs)}`;
     }
+    if(els.rcRace){
+      const rl = raceLineText(entry);
+      els.rcRace.textContent = rl;
+      els.rcRace.style.display = rl ? 'block' : 'none';
+    }
     els.rideCard.style.display = 'block';
   }
 
@@ -2882,6 +3047,7 @@ if(paused){
       els.modalTitle.textContent = entry.note ? entry.note : (formatDate(entry.date) + ' Ride');
       els.modalLegend.style.display = 'none';
       els.playbackPanel.style.display = 'block';
+      setupRaceLaunch(entry);
       els.modalBackdrop.classList.add('open');
 
       requestAnimationFrame(()=>{
@@ -2933,6 +3099,11 @@ if(paused){
     const hasRoute = entry.path && entry.path.length >= 2;
     els.fcViewRouteBtn.style.display = hasRoute ? '' : 'none';
     if(els.fcStyleTransparentBtn) els.fcStyleTransparentBtn.disabled = !hasRoute;
+    if(els.fcRace){
+      const rl = raceLineText(entry);
+      els.fcRace.textContent = rl;
+      els.fcRace.style.display = rl ? 'block' : 'none';
+    }
     setFcShareStyle('card'); // reset to the default each time the card opens
   }
 
@@ -3205,6 +3376,7 @@ if(paused){
   }
 
   function openCompare(a, b){
+    raceLaunchHide();
     els.modalTitle.textContent = 'Compare Rides';
     if(els.rideCard) els.rideCard.style.display = 'none';
     els.modalLegend.style.display = 'flex';
@@ -3239,6 +3411,7 @@ if(paused){
   }
 
   function showNoRoute(entry, justFinished){
+    raceLaunchHide();
     populateRideCard(entry, justFinished);
     els.modalTitle.textContent = entry.note ? entry.note : (formatDate(entry.date) + ' Ride');
     els.modalLegend.style.display = 'none';
@@ -3322,6 +3495,404 @@ if(paused){
       startPlayback();
     }
   });
+
+  // ---------- race mode ----------
+  // Race live against a saved ride (the "ghost"). Two modes:
+  //   same route      - ride the ghost's recorded course again. Your position is matched to that
+  //                     course, so the gap shows who is further along it. First to the finish line
+  //                     (a little before the course end) wins.
+  //   different route - ride anywhere. Only distance and time count: the ghost's moving distance is
+  //                     compared with yours, first to cover the ghost's total distance wins.
+  // The race clock is wall-clock time (pauses and red lights cost you time, like a real race) and starts
+  // when you move off. The ghost is trimmed to start from its own move-off point so both start from rest.
+
+  function raceFmtGap(sec){
+    const a = Math.abs(sec);
+    if(a < 10) return a.toFixed(1) + ' s';
+    if(a < 60) return Math.round(a) + ' s';
+    return formatDuration(a);
+  }
+
+  function raceFmtDist(m){
+    const a = Math.abs(m);
+    return a >= 1000 ? (a/1000).toFixed(2) + ' km' : Math.round(a) + ' m';
+  }
+
+  // Normalises a saved ride into a ghost: starts at its move-off point, with s = distance along
+  // the course (same route) or moving distance (different route). Returns null if it can't be raced.
+  function raceBuildGhost(entry, mode){
+    const src = entry && entry.path;
+    if(!src || src.length < 2) return null;
+    let i0 = src.findIndex(p => (p.v || 0) >= RACE_MOVE_MS);
+    if(i0 < 0) return null;
+    if(i0 > 0) i0 -= 1; // keep the standstill point just before moving off so the start interpolates from rest
+    const slice = src.slice(i0);
+    if(slice.length < 2) return null;
+    const t0 = slice[0].t, d0 = slice[0].d || 0;
+    let c = 0;
+    const pts = slice.map((p, i) => {
+      if(i > 0) c += haversine(slice[i-1].lat, slice[i-1].lon, p.lat, p.lon);
+      return { lat: p.lat, lon: p.lon, v: p.v || 0, t: Math.max(0, p.t - t0), d: Math.max(0, (p.d || 0) - d0), c };
+    });
+    for(let i = 1; i < pts.length; i++){
+      if(pts[i].t < pts[i-1].t) pts[i].t = pts[i-1].t;
+      if(pts[i].d < pts[i-1].d) pts[i].d = pts[i-1].d;
+    }
+    const last = pts[pts.length - 1];
+    const L = last.c;   // length of the recorded route (m)
+    const D = last.d;   // moving distance (m)
+    const total = mode === 'same' ? L : D;
+    if(total < RACE_MIN_DIST_M || last.t < RACE_MIN_TIME_S) return null;
+    pts.forEach(p => { p.s = mode === 'same' ? p.c : p.d; });
+    const finishS = mode === 'same' ? Math.max(L - RACE_FINISH_ZONE_M, L * 0.85) : D;
+    const g = { mode, pts, L, D, finishS, T: last.t, finishT: 0 };
+    g.finishT = raceTimeAtS(g, finishS);
+    return g;
+  }
+
+  // how far (s) the ghost has got after t seconds
+  function raceSAt(g, t){
+    const pts = g.pts;
+    if(t <= 0) return 0;
+    if(t >= g.T) return pts[pts.length - 1].s;
+    let lo = 0, hi = pts.length - 1;
+    while(hi - lo > 1){ const mid = (lo + hi) >> 1; if(pts[mid].t <= t) lo = mid; else hi = mid; }
+    const a = pts[lo], b = pts[hi];
+    const span = b.t - a.t;
+    return span > 0 ? a.s + (b.s - a.s) * ((t - a.t) / span) : b.s;
+  }
+
+  // when (seconds) the ghost first reached distance s
+  function raceTimeAtS(g, s){
+    const pts = g.pts;
+    if(s <= 0) return 0;
+    let lo = 0, hi = pts.length - 1;
+    if(pts[hi].s < s) return pts[hi].t;
+    while(lo < hi){ const mid = (lo + hi) >> 1; if(pts[mid].s >= s) hi = mid; else lo = mid + 1; }
+    const b = pts[lo], a = pts[Math.max(0, lo - 1)];
+    const ds = b.s - a.s;
+    return ds > 0 ? a.t + (b.t - a.t) * ((s - a.s) / ds) : b.t;
+  }
+
+  // closest point on the course (searching segments fromIdx..toIdx); s = distance along the course
+  function raceProject(g, lat, lon, fromIdx, toIdx){
+    const pts = g.pts;
+    const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 111320;
+    const a0 = Math.max(0, fromIdx), b0 = Math.min(pts.length - 2, toIdx);
+    let best = null;
+    for(let i = a0; i <= b0; i++){
+      const A = pts[i], B = pts[i+1];
+      const ax = (A.lon - lon) * kx, ay = (A.lat - lat) * ky;
+      const bx = (B.lon - lon) * kx, by = (B.lat - lat) * ky;
+      const dx = bx - ax, dy = by - ay;
+      const len2 = dx*dx + dy*dy;
+      let u = len2 > 0 ? -(ax*dx + ay*dy) / len2 : 0;
+      u = Math.max(0, Math.min(1, u));
+      const dist = Math.hypot(ax + u*dx, ay + u*dy);
+      if(!best || dist < best.dist - 0.5) best = { i, u, dist, s: A.c + u * (B.c - A.c) };
+    }
+    return best;
+  }
+
+  function raceCourseAt(s){
+    const g = race.ghost, pts = g.pts;
+    if(s <= 0) return { lat: pts[0].lat, lon: pts[0].lon };
+    if(s >= g.L){ const q = pts[pts.length - 1]; return { lat: q.lat, lon: q.lon }; }
+    let lo = 0, hi = pts.length - 1;
+    while(hi - lo > 1){ const mid = (lo + hi) >> 1; if(pts[mid].c <= s) lo = mid; else hi = mid; }
+    const a = pts[lo], b = pts[hi], span = b.c - a.c;
+    const f = span > 0 ? (s - a.c) / span : 0;
+    return { lat: a.lat + (b.lat - a.lat) * f, lon: a.lon + (b.lon - a.lon) * f };
+  }
+
+  // demo mode: a simulated rider who stays close to the ghost's pace, so the race is actually tight
+  function raceDemoSpeed(t){
+    const gv = interpolateAt(race.ghost.pts, t).v || 0;
+    const wobble = 1 + 0.1 * Math.sin(t / 17 + race.demoPhase);
+    return Math.max(0, gv * wobble + (Math.random() - 0.5));
+  }
+
+  // ----- arming / cancelling -----
+  function raceArm(entry, mode){
+    if(tracking) return;
+    const g = raceBuildGhost(entry, mode);
+    if(!g){
+      setHint('That ride is too short to race (it needs at least 200 m).');
+      return;
+    }
+    raceMapClear();
+    const dist = mode === 'same' ? g.L : g.D;
+    race = {
+      mode, entry, ghost: g, state: 'armed',
+      vsText: `vs ${formatDate(entry.date)} · ${formatTime(entry.date)} · ${metersToDistUnit(dist).toFixed(1)} ${distUnitLabel()} · ${formatDuration(g.finishT)}`,
+      fix: null, startDist: null, segIdx: 0, projS: 0, sU: 0, offFixes: 0, offRoute: false,
+      t0: null, dist0: 0, prevS: 0, prevT: 0, elapsed: 0, gapSec: null, gapM: null,
+      finalTime: null, margin: null, won: false,
+      mapLine: null, mapMarker: null, demoPhase: Math.random() * Math.PI * 2
+    };
+    closeModal();
+    els.sessionBtn.textContent = 'Start Race';
+    setHint('');
+    raceRenderHud();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function raceCancel(){
+    if(!race) return;
+    raceMapClear();
+    race = null;
+    els.raceHud.style.display = 'none';
+    if(tracking){
+      setHint('Race cancelled — still tracking this session.');
+    }else{
+      els.sessionBtn.textContent = 'Start Tracking';
+    }
+  }
+
+  // called once the session has stopped (the race record was already captured for saving)
+  function raceEnd(){
+    raceMapClear();
+    race = null;
+    els.raceHud.style.display = 'none';
+  }
+
+  function raceOnTrackingStart(){
+    if(!race) return;
+    race.state = 'waiting';
+    race.fix = null; race.startDist = null; race.segIdx = 0; race.projS = 0; race.sU = 0;
+    race.offFixes = 0; race.offRoute = false; race.elapsed = 0; race.gapSec = null; race.gapM = null;
+    race.finalTime = null; race.margin = null; race.won = false;
+    raceRenderHud();
+  }
+
+  // ----- live updates -----
+  // New GPS fix (or simulated position): match it to the course for same-route races.
+  function raceOnFix(lat, lon){
+    if(!race) return;
+    race.fix = { lat, lon };
+    if(race.mode !== 'same') return;
+    const g = race.ghost;
+    race.startDist = haversine(lat, lon, g.pts[0].lat, g.pts[0].lon);
+    let res = raceProject(g, lat, lon, race.segIdx - 3, race.segIdx + RACE_WINDOW_SEGS);
+    if(res && res.dist > RACE_OFFROUTE_M){
+      race.offFixes++;
+      if(race.offFixes >= 3){
+        // been away for a while: look along the whole course to re-acquire, but never accept
+        // jumping backwards by more than 50 m
+        const wide = raceProject(g, lat, lon, 0, g.pts.length - 2);
+        if(wide && wide.dist <= RACE_OFFROUTE_M && wide.s >= race.sU - 50) res = wide;
+      }
+    }else{
+      race.offFixes = 0;
+    }
+    race.offRoute = !res || res.dist > RACE_OFFROUTE_M;
+    if(res && !race.offRoute){
+      race.segIdx = res.i;
+      race.projS = res.s;
+      if(race.state === 'running') race.sU = Math.max(race.sU, res.s);
+    }
+  }
+
+  function raceBegin(now){
+    race.state = 'running';
+    race.t0 = now;
+    race.dist0 = distanceM;
+    race.sU = race.mode === 'same' ? race.projS : 0;
+    race.prevS = race.sU;
+    race.prevT = 0;
+    race.elapsed = 0;
+    try{ if(navigator.vibrate) navigator.vibrate(120); }catch(e){}
+  }
+
+  function raceFinish(tf){
+    const g = race.ghost;
+    race.state = 'finished';
+    race.finalTime = tf;
+    race.margin = g.finishT - tf; // > 0 means you finished first
+    race.won = race.margin > 0;
+    try{ if(navigator.vibrate) navigator.vibrate(race.won ? [200,100,200,100,400] : [400]); }catch(e){}
+  }
+
+  // runs about once a second and after every fix (from updateLiveStats)
+  function raceStep(){
+    if(!race || !tracking) return;
+    const now = Date.now();
+    const g = race.ghost;
+
+    if(race.state === 'waiting'){
+      const moving = currentSpeedMs >= RACE_MOVE_MS;
+      if(race.mode === 'same'){
+        if(race.fix && race.startDist !== null && race.startDist <= RACE_START_ZONE_M && moving) raceBegin(now);
+      }else if(moving){
+        raceBegin(now);
+      }
+    }
+
+    if(race.state === 'running'){
+      const elapsed = (now - race.t0) / 1000;
+      const sU = race.mode === 'same' ? race.sU : Math.max(0, distanceM - race.dist0);
+      race.elapsed = elapsed;
+      race.sNow = sU;
+      race.gapSec = elapsed - raceTimeAtS(g, Math.min(sU, g.finishS)); // > 0 means behind
+      race.gapM = raceSAt(g, elapsed) - sU;                           // > 0 means behind
+      if(sU >= g.finishS){
+        // work out the moment the line was crossed between the previous reading and this one
+        let tf = elapsed;
+        if(race.prevS < g.finishS && sU > race.prevS){
+          tf = race.prevT + (elapsed - race.prevT) * ((g.finishS - race.prevS) / (sU - race.prevS));
+        }
+        raceFinish(tf);
+      }else{
+        race.prevS = sU;
+        race.prevT = elapsed;
+      }
+    }
+
+    raceRenderHud();
+    raceMapSync();
+  }
+
+  // ----- on-screen race panel -----
+  function raceRenderHud(){
+    if(!race){ els.raceHud.style.display = 'none'; return; }
+    const g = race.ghost;
+    els.raceHud.style.display = 'block';
+    els.raceModeChip.textContent = race.mode === 'same' ? 'Same route' : 'Different route';
+    els.raceVs.textContent = race.vsText;
+    els.raceHud.classList.remove('ahead', 'behind');
+    els.raceWarn.style.display = (race.mode === 'same' && race.offRoute && race.state === 'running') ? 'block' : 'none';
+
+    let gap = '–', label = '', sub = '', youPct = 0, ghostPct = 0;
+    const kmTotal = `${metersToDistUnit(race.mode === 'same' ? g.L : g.D).toFixed(1)} ${distUnitLabel()}`;
+
+    if(race.state === 'armed'){
+      gap = 'Ready';
+      label = 'tap Start Race';
+      sub = race.mode === 'same'
+        ? 'Be at the start line, then move off. First to the end of the route wins.'
+        : `Start anywhere. First to cover ${kmTotal} wins.`;
+    }else if(race.state === 'waiting'){
+      if(race.mode === 'same'){
+        if(race.startDist === null){
+          gap = '…'; label = 'finding GPS'; sub = 'Waiting for a GPS fix.';
+        }else if(race.startDist <= RACE_START_ZONE_M){
+          gap = 'Go!'; label = 'move off to begin'; sub = 'You are on the start line. The clock starts when you move.';
+        }else{
+          gap = raceFmtDist(race.startDist); label = 'to the start'; sub = 'Head to the start line of the route.';
+        }
+      }else{
+        gap = 'Go!'; label = 'move off to begin'; sub = 'The clock starts when you start moving.';
+      }
+    }else if(race.state === 'running'){
+      const behind = race.gapSec > 0;
+      els.raceHud.classList.add(behind ? 'behind' : 'ahead');
+      gap = raceFmtGap(race.gapSec);
+      label = behind ? 'behind' : 'ahead';
+      const gv = interpolateAt(g.pts, race.elapsed).v || 0;
+      sub = `${raceFmtDist(race.gapM)} ${race.gapM > 0 ? 'behind' : 'ahead'} · ghost ${Math.round(msToUnit(gv))} km/h · ${formatDuration(race.elapsed)} / ${formatDuration(g.finishT)}`;
+      youPct = (race.sNow / g.finishS) * 100;
+      ghostPct = (raceSAt(g, race.elapsed) / g.finishS) * 100;
+    }else if(race.state === 'finished'){
+      els.raceHud.classList.add(race.won ? 'ahead' : 'behind');
+      gap = raceFmtGap(race.margin);
+      label = race.won ? 'WON — you finished first' : 'LOST — the ghost finished first';
+      sub = `You ${formatDuration(race.finalTime)} · ghost ${formatDuration(g.finishT)}. Keep riding or tap Stop Tracking to save the ride.`;
+      youPct = 100;
+      ghostPct = 100;
+    }
+    els.raceGap.textContent = gap;
+    els.raceGapLabel.textContent = label;
+    els.raceSub.textContent = sub;
+    els.raceDotYou.style.left = Math.max(0, Math.min(100, youPct)) + '%';
+    els.raceDotGhost.style.left = Math.max(0, Math.min(100, ghostPct)) + '%';
+  }
+
+  // same-route only: draw the course and the ghost on the live map (when it has been opened)
+  function raceMapSync(){
+    if(!liveMap || !race || race.mode !== 'same') return;
+    const g = race.ghost;
+    if(els.liveMapEmpty) els.liveMapEmpty.style.display = 'none'; // the course is worth seeing before the first fix
+    if(!race.mapLine){
+      race.mapLine = L.polyline(g.pts.map(p => [p.lat, p.lon]), { color: '#c9a44c', weight: 4, opacity: 0.55, dashArray: '6 8' }).addTo(liveMap);
+      if(!liveMapMarker) liveMap.fitBounds(race.mapLine.getBounds(), { padding: [20, 20] });
+    }
+    const t = (race.state === 'running' || race.state === 'finished') ? Math.min(race.elapsed || 0, g.T) : 0;
+    const p = interpolateAt(g.pts, t);
+    if(!race.mapMarker){
+      race.mapMarker = L.circleMarker([p.lat, p.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#c9a44c', fillOpacity: 1 }).addTo(liveMap);
+    }else{
+      race.mapMarker.setLatLng([p.lat, p.lon]);
+    }
+  }
+
+  function raceMapClear(){
+    if(race){
+      if(race.mapLine){ race.mapLine.remove(); race.mapLine = null; }
+      if(race.mapMarker){ race.mapMarker.remove(); race.mapMarker = null; }
+    }
+    if(els.liveMapEmpty && !liveMapMarker) els.liveMapEmpty.style.display = 'flex';
+  }
+
+  // ----- saving / showing results -----
+  function raceBuildRecord(){
+    if(!race || (race.state !== 'running' && race.state !== 'finished')) return null;
+    const r = {
+      vsId: race.entry.id,
+      vsDate: race.entry.date,
+      vsNote: race.entry.note || '',
+      mode: race.mode,
+      finished: race.state === 'finished',
+      ghostTimeSec: Math.round(race.ghost.finishT * 10) / 10
+    };
+    if(r.finished){
+      r.userTimeSec = Math.round(race.finalTime * 10) / 10;
+      r.marginSec = Math.round(race.margin * 10) / 10; // > 0 = you won by this much
+      r.won = race.won;
+    }else{
+      r.gapSec = race.gapSec !== null ? Math.round(race.gapSec * 10) / 10 : null;
+    }
+    return r;
+  }
+
+  function raceTag(e){
+    const r = e && e.race;
+    if(!r) return '';
+    if(!r.finished) return ' · 🏁 DNF';
+    return r.won ? ` · 🏁 won by ${raceFmtGap(r.marginSec)}` : ` · 🏁 lost by ${raceFmtGap(r.marginSec)}`;
+  }
+
+  function raceLineText(e){
+    const r = e && e.race;
+    if(!r) return '';
+    const mode = r.mode === 'same' ? 'same route' : 'different route';
+    const vs = `${formatDate(r.vsDate)} · ${formatTime(r.vsDate)}`;
+    if(!r.finished) return `🏁 Race not finished · ${mode} vs ${vs}`;
+    return `🏁 ${r.won ? 'Won' : 'Lost'} by ${raceFmtGap(r.marginSec)} · ${mode} vs ${vs}`;
+  }
+
+  // ----- starting a race from a ride's detail sheet -----
+  let raceLaunchEntry = null;
+
+  function raceLaunchHide(){
+    if(els.raceLaunch) els.raceLaunch.style.display = 'none';
+  }
+
+  function setupRaceLaunch(entry){
+    if(!els.raceLaunch) return;
+    raceLaunchEntry = entry;
+    els.raceLaunch.style.display = 'block';
+    const okSame = !!raceBuildGhost(entry, 'same');
+    const okDiff = !!raceBuildGhost(entry, 'diff');
+    els.raceSameBtn.disabled = !okSame || tracking;
+    els.raceDiffBtn.disabled = !okDiff || tracking;
+    els.raceLaunchNote.textContent = tracking
+      ? 'Stop your current session to start a race.'
+      : (!okSame && !okDiff ? 'This ride is too short to race (it needs at least 200 m).' : '');
+  }
+
+  els.raceSameBtn.addEventListener('click', ()=>{ if(raceLaunchEntry) raceArm(raceLaunchEntry, 'same'); });
+  els.raceDiffBtn.addEventListener('click', ()=>{ if(raceLaunchEntry) raceArm(raceLaunchEntry, 'diff'); });
+  els.raceCancelBtn.addEventListener('click', raceCancel);
 
   // ---------- section tabs ----------
   function setActiveTab(tab){

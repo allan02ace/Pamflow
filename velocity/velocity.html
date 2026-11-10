@@ -23,8 +23,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <!-- leaflet-rotate 0.5.4 (local copy): lets the user rotate the maps. Must load right after Leaflet. -->
 <script src="leaflet-rotate.js"></script>
-<!-- three.js r152.2 (local copy, classic build): powers the optional 3D bike view. If it fails to load the 3D buttons are hidden. -->
-<script src="three.min.js"></script>
+<!-- three.js r152.2 from jsDelivr (local three.min.js is an optional fallback): powers the optional 3D bike view. If neither loads, the 3D buttons are hidden. -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script>if(!window.THREE){ document.write('<script src="three.min.js"><\/script>'); }</script> <!-- falls back to the local copy if the CDN is unreachable; optional -->
 <style>
   :root{
     --bg:#000000;

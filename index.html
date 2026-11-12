@@ -194,6 +194,19 @@ button{font-family:inherit; cursor:pointer;}
   transition: transform .12s ease, box-shadow .12s ease;
 }
 .acc-card:active{transform: scale(0.98);}
+.acc-card, .acc-hero{-webkit-touch-callout:none; -webkit-user-select:none; user-select:none;}
+.acc-card.lp-active{transform: scale(0.96); box-shadow: 0 0 0 2px var(--main);}
+.qr-dot{display:inline-block; margin-left:6px; font-size:11px; opacity:.75;}
+.qr-frame{
+  background:#fff; border-radius:20px; padding:14px; margin:6px auto 14px;
+  width:100%; max-width:300px; aspect-ratio:1/1;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: var(--shadow-sm); border:1px solid var(--line); overflow:hidden;
+}
+.qr-frame img{width:100%; height:100%; object-fit:contain; display:block;}
+.qr-empty{text-align:center; color:var(--ink-soft); font-size:13px; font-weight:600; padding:12px;}
+.qr-empty .big{font-size:42px; display:block; margin-bottom:6px;}
+.qr-actions{display:flex; flex-direction:column; gap:8px;}
 .acc-avatar{
   width:44px; height:44px; border-radius:14px;
   display:flex; align-items:center; justify-content:center;
@@ -1205,6 +1218,22 @@ button:focus-visible, .chip:focus-visible, .acc-opt:focus-visible, .emoji-opt:fo
 </div>
 
 <!-- ===== MODAL: Add Group ===== -->
+<!-- ===== MODAL: Account QR ===== -->
+<div class="overlay" id="modal-qr">
+  <div class="sheet">
+    <button class="sheet-close" onclick="hideOverlay('modal-qr')" aria-label="Close QR code">✕</button>
+    <div class="sheet-handle"></div>
+    <h3 id="qr-modal-title">QR code</h3>
+    <div class="qr-frame" id="qr-frame"></div>
+    <div class="qr-actions">
+      <button class="btn-primary" id="qr-share-btn" style="display:none;" onclick="shareAccountQR()">📤 Share QR code</button>
+      <button class="btn-secondary" id="qr-upload-btn" onclick="document.getElementById('qr-file-input').click()">Upload QR code</button>
+      <button class="btn-danger" id="qr-remove-btn" style="display:none;" onclick="removeAccountQR()">Remove QR code</button>
+    </div>
+    <input type="file" id="qr-file-input" accept="image/*" style="display:none;" onchange="handleQRFile(this)">
+  </div>
+</div>
+
 <div class="overlay" id="modal-group">
   <div class="sheet">
     <button class="sheet-close" onclick="hideOverlay('modal-group')" aria-label="Close group form">✕</button>
@@ -1759,11 +1788,11 @@ function renderHome(){
 function accCardHTML(a){
   const bal = accountBalance(a, false);
   const limitLine = (a.type==='credit' && a.creditLimit) ? `<div class="acc-type">Limit: ${peso(a.creditLimit)}</div>` : '';
-  return `<div class="acc-card" onclick="go('account','${a.id}')">
+  return `<div class="acc-card" data-acc-id="${a.id}" onclick="go('account','${a.id}')">
     <div class="acc-avatar" style="background:${a.color}">${avatarInner(a)}</div>
     <div class="acc-meta">
       <div class="acc-name">${escapeHtml(a.name)}</div>
-      <div class="acc-type">${TYPE_LABEL[a.type]}</div>
+      <div class="acc-type">${TYPE_LABEL[a.type]}${a.qr?'<span class="qr-dot" title="QR saved">▦</span>':''}</div>
       ${limitLine}
     </div>
     <div class="acc-bal ${bal<0?'neg':''} mono">${peso(bal)}</div>
@@ -1923,7 +1952,7 @@ function renderAccountDetail(){
   const bal = accountBalance(acc, false);
 
   let html = `
-  <div class="acc-hero" style="background: linear-gradient(135deg, ${acc.color}, ${shade(acc.color)})">
+  <div class="acc-hero" data-acc-id="${acc.id}" style="background: linear-gradient(135deg, ${acc.color}, ${shade(acc.color)})">
     <div class="top">
       <div class="av">${avatarInner(acc)}</div>
       <div><div class="nm">${escapeHtml(acc.name)}</div><div class="ty">${TYPE_LABEL[acc.type]}</div></div>
@@ -3763,6 +3792,222 @@ function closeVelocity(){
   document.getElementById('velocity-overlay').classList.remove('show');
   haptic('light');
 }
+
+/* ============ ACCOUNT QR CODE (long-press any account) ============ */
+let qrAccountId = null;
+
+function openAccountQR(accId){
+  const acc = getAccount(accId);
+  if(!acc) return;
+  qrAccountId = accId;
+  haptic('medium');
+  document.getElementById('qr-modal-title').textContent = acc.name + ' — QR code';
+  renderQRModal();
+  showOverlay('modal-qr');
+}
+function renderQRModal(){
+  const acc = getAccount(qrAccountId);
+  if(!acc) return;
+  const frame = document.getElementById('qr-frame');
+  if(acc.qr){
+    frame.innerHTML = '<img alt="QR code for ' + escapeHtml(acc.name) + '">';
+    frame.firstChild.src = acc.qr;
+  } else {
+    frame.innerHTML = '<div class="qr-empty"><span class="big">▦</span>No QR code yet.<br>Upload one to show it here.</div>';
+  }
+  document.getElementById('qr-upload-btn').textContent = acc.qr ? 'Replace QR code' : 'Upload QR code';
+  document.getElementById('qr-remove-btn').style.display = acc.qr ? 'block' : 'none';
+  document.getElementById('qr-share-btn').style.display = acc.qr ? 'block' : 'none';
+}
+// Scale down large photos/screenshots so localStorage doesn't fill up.
+function readQRImage(file, cb){
+  const reader = new FileReader();
+  reader.onerror = ()=> cb(null);
+  reader.onload = ()=>{
+    const img = new Image();
+    img.onerror = ()=> cb(null);
+    img.onload = ()=>{
+      const MAX = 800;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      let url = c.toDataURL('image/png');
+      if(url.length > 450000) url = c.toDataURL('image/jpeg', 0.88);
+      cb(url);
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+function handleQRFile(input){
+  const file = input.files && input.files[0];
+  input.value = '';
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ toast('Please choose an image file'); return; }
+  const acc = getAccount(qrAccountId);
+  if(!acc) return;
+  readQRImage(file, url=>{
+    if(!url){ toast('Could not read that image'); return; }
+    acc.qr = url;
+    saveState(); renderQRModal(); render(); haptic('medium'); toast('QR code saved');
+  });
+}
+// Build a shareable card image: bank logo + name + QR code.
+function loadImg(src){
+  return new Promise(res=>{
+    if(!src) return res(null);
+    const im = new Image();
+    im.onload = ()=> res(im);
+    im.onerror = ()=> res(null);
+    im.src = src;
+  });
+}
+function rrect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath();
+}
+function fitText(ctx, text, maxW, startPx, weight, family){
+  let px = startPx;
+  do { ctx.font = `${weight} ${px}px ${family}`; px -= 2; } while(ctx.measureText(text).width > maxW && px > 24);
+  return text;
+}
+async function buildAccountQRImage(acc, withLogo){
+  const W = 1080, H = 1420, FAM = "'Baloo 2', 'Nunito', system-ui, sans-serif";
+  const qrImg = await loadImg(acc.qr);
+  if(!qrImg) throw new Error('qr load failed');
+  let logoImg = null;
+  if(withLogo && acc.logo !== ''){
+    logoImg = await loadImg('logos/' + (acc.logo || slugify(acc.name)) + '.png');
+  }
+  try{ await document.fonts.ready; }catch(e){}
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+
+  // Background gradient in the account's colour
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, acc.color); g.addColorStop(1, shade(acc.color));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  // White card
+  const cx = 70, cy = 90, cw = W - 140, ch = H - 180;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20;
+  ctx.fillStyle = '#fff'; rrect(ctx, cx, cy, cw, ch, 60); ctx.fill(); ctx.restore();
+
+  // Avatar (logo or emoji icon)
+  const AV = 190, ax = W/2 - AV/2, ay = cy + 70;
+  ctx.save(); rrect(ctx, ax, ay, AV, AV, 52); ctx.clip();
+  ctx.fillStyle = acc.color; ctx.fillRect(ax, ay, AV, AV);
+  if(logoImg){
+    ctx.drawImage(logoImg, ax, ay, AV, AV);
+  } else {
+    ctx.font = '104px system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+    ctx.fillText(acc.icon || '🏦', W/2, ay + AV/2 + 6);
+  }
+  ctx.restore();
+
+  // Name + type
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#3a0a54';
+  fitText(ctx, acc.name, cw - 120, 78, '800', FAM);
+  ctx.fillText(acc.name, W/2, ay + AV + 100);
+  ctx.fillStyle = '#8a6a9a'; ctx.font = `600 38px ${FAM}`;
+  ctx.fillText((TYPE_LABEL[acc.type] || '').toUpperCase(), W/2, ay + AV + 160);
+
+  // QR (white framed, contain-fit)
+  const qs = 640, qx = W/2 - qs/2, qy = ay + AV + 215;
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#eadcf0'; ctx.lineWidth = 4;
+  rrect(ctx, qx - 18, qy - 18, qs + 36, qs + 36, 36); ctx.fill(); ctx.stroke();
+  const sc = Math.min(qs / qrImg.width, qs / qrImg.height);
+  const dw = qrImg.width * sc, dh = qrImg.height * sc;
+  ctx.drawImage(qrImg, W/2 - dw/2, qy + qs/2 - dh/2, dw, dh);
+
+  // Footer
+  ctx.fillStyle = '#8a6a9a'; ctx.font = `700 38px ${FAM}`;
+  ctx.fillText('Scan to send money', W/2, cy + ch - 60);
+
+  return new Promise((resolve, reject)=>{
+    try{ c.toBlob(b=> b ? resolve(b) : reject(new Error('blob failed')), 'image/png'); }
+    catch(e){ reject(e); }
+  });
+}
+async function shareAccountQR(){
+  const acc = getAccount(qrAccountId);
+  if(!acc || !acc.qr){ toast('Upload a QR code first'); return; }
+  let blob;
+  try{
+    try{ blob = await buildAccountQRImage(acc, true); }
+    catch(e){ blob = await buildAccountQRImage(acc, false); } // logo tainted the canvas → fall back to icon
+  }catch(e){ toast('Could not create the image'); return; }
+  const safe = (acc.name || 'account').replace(/[^\w\-]+/g, '_');
+  const file = new File([blob], safe + '_QR.png', { type: 'image/png' });
+  try{
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({ files:[file], title: acc.name + ' QR code' });
+      return;
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return; // user closed the share sheet
+  }
+  // Fallback: download the image
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = safe + '_QR.png';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  toast('Image saved — share it from your downloads');
+}
+
+function removeAccountQR(){
+  const acc = getAccount(qrAccountId);
+  if(!acc || !acc.qr) return;
+  if(!confirm('Remove the QR code for this account?')) return;
+  delete acc.qr;
+  saveState(); renderQRModal(); render(); toast('QR code removed');
+}
+
+// Long-press detection on account cards and the account detail header.
+(function setupAccountLongPress(){
+  const HOLD_MS = 550, MOVE_TOL = 10;
+  let timer = null, startX = 0, startY = 0, target = null, fired = false;
+  const sel = '.acc-card[data-acc-id], .acc-hero[data-acc-id]';
+  function cancel(){
+    clearTimeout(timer); timer = null;
+    if(target) target.classList.remove('lp-active');
+    target = null;
+  }
+  document.addEventListener('pointerdown', e=>{
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    const el = e.target.closest && e.target.closest(sel);
+    if(!el || e.target.closest('button')) return;
+    fired = false; target = el; startX = e.clientX; startY = e.clientY;
+    el.classList.add('lp-active');
+    timer = setTimeout(()=>{
+      fired = true;
+      const id = el.dataset.accId;
+      cancel();
+      openAccountQR(id);
+    }, HOLD_MS);
+  });
+  document.addEventListener('pointermove', e=>{
+    if(timer && (Math.abs(e.clientX-startX) > MOVE_TOL || Math.abs(e.clientY-startY) > MOVE_TOL)) cancel();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=> document.addEventListener(ev, ()=>{ if(!fired) cancel(); }));
+  document.addEventListener('scroll', ()=>{ if(timer) cancel(); }, true);
+  // Swallow the click that follows a long press so it doesn't also open the account.
+  document.addEventListener('click', e=>{
+    if(fired){ fired = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  // Stop the browser's own long-press menu on these elements.
+  document.addEventListener('contextmenu', e=>{
+    if(e.target.closest && e.target.closest(sel)) e.preventDefault();
+  });
+})();
 
 /* ============ OVERLAY HELPERS ============ */
 function showOverlay(id){
